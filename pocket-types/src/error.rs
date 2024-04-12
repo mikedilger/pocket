@@ -26,7 +26,13 @@ pub enum InnerError {
     BufferTooSmall(usize),
     EndOfInput,
     General(String),
+    JsonBad(&'static str, usize),
+    JsonBadCharacter(char, usize, char),
+    JsonBadStringChar(u32),
+    JsonEscape,
+    JsonEscapeSurrogate,
     TryFromSlice(std::array::TryFromSliceError),
+    Utf8Error,
 }
 
 impl std::fmt::Display for InnerError {
@@ -38,7 +44,21 @@ impl std::fmt::Display for InnerError {
             }
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
+            InnerError::JsonBad(err, pos) => write!(f, "JSON bad: {err} at position {pos}"),
+            InnerError::JsonBadCharacter(c, pos, ec) => write!(
+                f,
+                "JSON bad character: {c} at position {pos}, {ec} was expected"
+            ),
+            InnerError::JsonBadStringChar(ch) => {
+                write!(f, "JSON string bad character: codepoint {ch}")
+            }
+            InnerError::JsonEscape => write!(f, "JSON string escape error"),
+            InnerError::JsonEscapeSurrogate => write!(
+                f,
+                "JSON string escape surrogate (ancient style) is not supported"
+            ),
             InnerError::TryFromSlice(e) => write!(f, "slice error: {e}"),
+            InnerError::Utf8Error => write!(f, "UTF-8 error"),
         }
     }
 }
