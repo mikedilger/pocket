@@ -26,6 +26,7 @@ pub enum InnerError {
     BufferTooSmall,
     EndOfInput,
     General(String),
+    TryFromSlice(std::array::TryFromSliceError),
 }
 
 impl std::fmt::Display for InnerError {
@@ -35,6 +36,7 @@ impl std::fmt::Display for InnerError {
             InnerError::BufferTooSmall => write!(f, "Output buffer too small"),
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
+            InnerError::TryFromSlice(e) => write!(f, "slice error: {e}"),
         }
     }
 }
@@ -42,6 +44,7 @@ impl std::fmt::Display for InnerError {
 impl StdError for InnerError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            InnerError::TryFromSlice(e) => Some(e),
             _ => None,
         }
     }
@@ -59,6 +62,16 @@ impl Into<Error> for InnerError {
     fn into(self) -> Error {
         Error {
             inner: self,
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<std::array::TryFromSliceError> for Error {
+    #[track_caller]
+    fn from(err: std::array::TryFromSliceError) -> Self {
+        Error {
+            inner: InnerError::TryFromSlice(err),
             location: std::panic::Location::caller(),
         }
     }
