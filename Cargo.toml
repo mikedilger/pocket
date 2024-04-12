@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "pocket-db",
+  "pocket-types",
+]
+resolver = "2"

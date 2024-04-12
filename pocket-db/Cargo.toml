@@ -1,0 +1,10 @@
+[package]
+name = "pocket-db"
+version = "0.1.0"
+description = "A database for nostr"
+authors = ["Mike Dilger <mike@mikedilger.com>"]
+license = "MIT"
+repository = "https://github.com/mikedilger/pocket"
+edition = "2021"
+
+[dependencies]
