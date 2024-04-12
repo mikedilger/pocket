@@ -22,12 +22,18 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    BadHexInput,
+    BufferTooSmall,
+    EndOfInput,
     General(String),
 }
 
 impl std::fmt::Display for InnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            InnerError::BadHexInput => write!(f, "Bad hex input"),
+            InnerError::BufferTooSmall => write!(f, "Output buffer too small"),
+            InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
         }
     }

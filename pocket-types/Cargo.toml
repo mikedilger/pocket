@@ -8,3 +8,4 @@ repository = "https://github.com/mikedilger/pocket"
 edition = "2021"
 
 [dependencies]
+derive_more = "0.99"
