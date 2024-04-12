@@ -22,12 +22,15 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    BadEventId,
     BadHexInput,
     BufferTooSmall(usize),
+    Crypto(secp256k1::Error),
     EndOfInput,
     General(String),
     JsonBad(&'static str, usize),
     JsonBadCharacter(char, usize, char),
+    JsonBadEvent(&'static str, usize),
     JsonBadStringChar(u32),
     JsonEscape,
     JsonEscapeSurrogate,
@@ -38,10 +41,12 @@ pub enum InnerError {
 impl std::fmt::Display for InnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            InnerError::BadEventId => write!(f, "Bad event id, does not match hash"),
             InnerError::BadHexInput => write!(f, "Bad hex input"),
             InnerError::BufferTooSmall(u) => {
                 write!(f, "Output buffer too small, we require >={} bytes", u)
             }
+            InnerError::Crypto(e) => write!(f, "Crypto: {e}"),
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
             InnerError::JsonBad(err, pos) => write!(f, "JSON bad: {err} at position {pos}"),
@@ -49,6 +54,9 @@ impl std::fmt::Display for InnerError {
                 f,
                 "JSON bad character: {c} at position {pos}, {ec} was expected"
             ),
+            InnerError::JsonBadEvent(err, pos) => {
+                write!(f, "JSON bad event: {err} at position {pos}")
+            }
             InnerError::JsonBadStringChar(ch) => {
                 write!(f, "JSON string bad character: codepoint {ch}")
             }
@@ -66,6 +74,7 @@ impl std::fmt::Display for InnerError {
 impl StdError for InnerError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            InnerError::Crypto(e) => Some(e),
             InnerError::TryFromSlice(e) => Some(e),
             _ => None,
         }
@@ -94,6 +103,16 @@ impl From<std::array::TryFromSliceError> for Error {
     fn from(err: std::array::TryFromSliceError) -> Self {
         Error {
             inner: InnerError::TryFromSlice(err),
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<secp256k1::Error> for Error {
+    #[track_caller]
+    fn from(err: secp256k1::Error) -> Self {
+        Error {
+            inner: InnerError::Crypto(err),
             location: std::panic::Location::caller(),
         }
     }

@@ -3,6 +3,9 @@ include!("macros.rs");
 mod error;
 pub use error::{Error, InnerError};
 
+mod event;
+pub use event::{Event, OwnedEvent};
+
 mod id;
 pub use id::Id;
 
