@@ -24,6 +24,7 @@ impl std::fmt::Display for Error {
 pub enum InnerError {
     EndOfInput,
     General(String),
+    Lmdb(heed::Error),
     Io(std::io::Error),
     PocketTypes(pocket_types::Error),
 }
@@ -34,6 +35,7 @@ impl std::fmt::Display for InnerError {
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
             InnerError::Io(e) => write!(f, "I/O: {e}"),
+            InnerError::Lmdb(e) => write!(f, "LMDB: {e}"),
             InnerError::PocketTypes(e) => write!(f, "types: {e}"),
         }
     }
@@ -43,6 +45,7 @@ impl StdError for InnerError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             InnerError::Io(e) => Some(e),
+            InnerError::Lmdb(e) => Some(e),
             InnerError::PocketTypes(e) => Some(e),
             _ => None,
         }
@@ -81,6 +84,16 @@ impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Error {
             inner: InnerError::Io(err),
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<heed::Error> for Error {
+    #[track_caller]
+    fn from(err: heed::Error) -> Self {
+        Error {
+            inner: InnerError::Lmdb(err),
             location: std::panic::Location::caller(),
         }
     }
