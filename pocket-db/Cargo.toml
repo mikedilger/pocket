@@ -8,3 +8,8 @@ repository = "https://github.com/mikedilger/pocket"
 edition = "2021"
 
 [dependencies]
+mmap-append = "0.2"
+pocket-types = { path = "../pocket-types" }
+
+[dev-dependencies]
+tempfile = "3"

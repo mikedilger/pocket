@@ -22,13 +22,19 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    EndOfInput,
     General(String),
+    Io(std::io::Error),
+    PocketTypes(pocket_types::Error),
 }
 
 impl std::fmt::Display for InnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
+            InnerError::Io(e) => write!(f, "I/O: {e}"),
+            InnerError::PocketTypes(e) => write!(f, "types: {e}"),
         }
     }
 }
@@ -36,6 +42,8 @@ impl std::fmt::Display for InnerError {
 impl StdError for InnerError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            InnerError::Io(e) => Some(e),
+            InnerError::PocketTypes(e) => Some(e),
             _ => None,
         }
     }
@@ -53,6 +61,26 @@ impl Into<Error> for InnerError {
     fn into(self) -> Error {
         Error {
             inner: self,
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<pocket_types::Error> for Error {
+    #[track_caller]
+    fn from(err: pocket_types::Error) -> Self {
+        Error {
+            inner: InnerError::PocketTypes(err),
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    #[track_caller]
+    fn from(err: std::io::Error) -> Self {
+        Error {
+            inner: InnerError::Io(err),
             location: std::panic::Location::caller(),
         }
     }
