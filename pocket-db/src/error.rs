@@ -22,21 +22,27 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    Deleted,
+    Duplicate,
     EndOfInput,
     General(String),
     Lmdb(heed::Error),
     Io(std::io::Error),
     PocketTypes(pocket_types::Error),
+    Scraper,
 }
 
 impl std::fmt::Display for InnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            InnerError::Deleted => write!(f, "Event was previously deleted"),
+            InnerError::Duplicate => write!(f, "Duplicate event"),
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
             InnerError::Io(e) => write!(f, "I/O: {e}"),
             InnerError::Lmdb(e) => write!(f, "LMDB: {e}"),
             InnerError::PocketTypes(e) => write!(f, "types: {e}"),
+            InnerError::Scraper => write!(f, "scraper"),
         }
     }
 }
