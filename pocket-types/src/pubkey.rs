@@ -6,6 +6,10 @@ use std::fmt;
 pub struct Pubkey([u8; 32]);
 
 impl Pubkey {
+    pub fn from_bytes(bytes: [u8; 32]) -> Pubkey {
+        Pubkey(bytes)
+    }
+
     /// Write to output buffer in lowercase hex format
     pub fn write_hex(&self, output: &mut [u8]) -> Result<(), Error> {
         write_hex!(self.0, output, 32)
