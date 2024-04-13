@@ -1,5 +1,5 @@
 mod error;
-use error::{Error, InnerError};
+pub use error::{Error, InnerError};
 
 mod event_store;
 use event_store::EventStore;
