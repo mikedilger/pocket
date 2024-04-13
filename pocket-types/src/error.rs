@@ -31,6 +31,7 @@ pub enum InnerError {
     JsonBad(&'static str, usize),
     JsonBadCharacter(char, usize, char),
     JsonBadEvent(&'static str, usize),
+    JsonBadFilter(&'static str, usize),
     JsonBadStringChar(u32),
     JsonEscape,
     JsonEscapeSurrogate,
@@ -56,6 +57,9 @@ impl std::fmt::Display for InnerError {
             ),
             InnerError::JsonBadEvent(err, pos) => {
                 write!(f, "JSON bad event: {err} at position {pos}")
+            }
+            InnerError::JsonBadFilter(err, pos) => {
+                write!(f, "JSON bad filter: {err} at position {pos}")
             }
             InnerError::JsonBadStringChar(ch) => {
                 write!(f, "JSON string bad character: codepoint {ch}")
