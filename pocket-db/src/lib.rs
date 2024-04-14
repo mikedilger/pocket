@@ -219,6 +219,12 @@ impl Store {
         }
     }
 
+    /// Do we have an event
+    pub fn has_event(&self, id: Id) -> Result<bool, Error> {
+        let txn = self.indexes.read_txn()?;
+        Ok(self.indexes.get_offset_by_id(&txn, id)?.is_some())
+    }
+
     /// Find all events that match the filter
     pub fn find_events<F>(
         &self,
