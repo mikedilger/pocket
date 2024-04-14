@@ -225,6 +225,12 @@ impl Store {
         Ok(self.indexes.get_offset_by_id(&txn, id)?.is_some())
     }
 
+    /// Is the event deleted
+    pub fn event_is_deleted(&self, id: Id) -> Result<bool, Error> {
+        let txn = self.indexes.read_txn()?;
+        self.indexes.is_deleted(&txn, id)
+    }
+
     /// Find all events that match the filter
     pub fn find_events<F>(
         &self,
