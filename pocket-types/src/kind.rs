@@ -1,3 +1,4 @@
+use crate::Error;
 use derive_more::{AsRef, Deref, From, Into};
 use std::fmt;
 
@@ -7,6 +8,11 @@ pub struct Kind(u16);
 impl Kind {
     pub fn as_u16(&self) -> u16 {
         self.0
+    }
+
+    pub fn try_from_string_bytes(str_bytes: &str) -> Result<Kind, Error> {
+        let u = str_bytes.parse::<u16>()?;
+        Ok(Kind(u))
     }
 
     pub fn is_replaceable(&self) -> bool {
