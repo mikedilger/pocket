@@ -1,5 +1,8 @@
 include!("macros.rs");
 
+mod addr;
+pub use addr::Addr;
+
 mod error;
 pub use error::{Error, InnerError};
 

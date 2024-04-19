@@ -28,6 +28,7 @@ pub enum InnerError {
     Crypto(secp256k1::Error),
     EndOfInput,
     General(String),
+    InvalidAddr,
     JsonBad(&'static str, usize),
     JsonBadCharacter(char, usize, char),
     JsonBadEvent(&'static str, usize),
@@ -36,6 +37,7 @@ pub enum InnerError {
     JsonEscape,
     JsonEscapeSurrogate,
     ParseInt(std::num::ParseIntError),
+    StdUtf8Error(std::str::Utf8Error),
     TryFromSlice(std::array::TryFromSliceError),
     Utf8Error,
 }
@@ -51,6 +53,7 @@ impl std::fmt::Display for InnerError {
             InnerError::Crypto(e) => write!(f, "Crypto: {e}"),
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
+            InnerError::InvalidAddr => write!(f, "Invalid naddr"),
             InnerError::JsonBad(err, pos) => write!(f, "JSON bad: {err} at position {pos}"),
             InnerError::JsonBadCharacter(c, pos, ec) => write!(
                 f,
@@ -71,6 +74,7 @@ impl std::fmt::Display for InnerError {
                 "JSON string escape surrogate (ancient style) is not supported"
             ),
             InnerError::ParseInt(e) => write!(f, "parse int error: {e}"),
+            InnerError::StdUtf8Error(e) => write!(f, "UTF-8 error: {e}"),
             InnerError::TryFromSlice(e) => write!(f, "slice error: {e}"),
             InnerError::Utf8Error => write!(f, "UTF-8 error"),
         }
@@ -129,6 +133,16 @@ impl From<std::num::ParseIntError> for Error {
     fn from(err: std::num::ParseIntError) -> Self {
         Error {
             inner: InnerError::ParseInt(err),
+            location: std::panic::Location::caller(),
+        }
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    #[track_caller]
+    fn from(err: std::str::Utf8Error) -> Self {
+        Error {
+            inner: InnerError::StdUtf8Error(err),
             location: std::panic::Location::caller(),
         }
     }
