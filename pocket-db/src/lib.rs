@@ -9,7 +9,7 @@ pub use lmdb::IndexStats;
 use lmdb::Lmdb;
 
 use heed::RwTxn;
-use pocket_types::{Event, Filter, Id, Time};
+use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
@@ -544,6 +544,64 @@ impl Store {
             .take(filter.limit() as usize)
             .copied()
             .collect())
+    }
+
+    /// Find a replaceable event
+    pub fn find_replaceable_event(
+        &self,
+        author: Pubkey,
+        kind: Kind,
+    ) -> Result<Option<&Event>, Error> {
+        if !kind.is_replaceable() {
+            return Err(InnerError::WrongEventKind.into());
+        }
+
+        let txn = self.indexes.read_txn()?;
+        let mut iter = self
+            .indexes
+            .akc_iter(author, kind, Time::min(), Time::max(), &txn)?;
+
+        if let Some(result) = iter.next() {
+            let (_key, offset) = result?;
+            let event = unsafe { self.events.get_event_by_offset(offset as usize)? };
+            Ok(Some(event))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Find a parameterized-replaceable event
+    pub fn find_parameterized_replaceable_event(
+        &self,
+        addr: &Addr,
+    ) -> Result<Option<&Event>, Error> {
+        if !addr.kind.is_parameterized_replaceable() {
+            return Err(InnerError::WrongEventKind.into());
+        }
+
+        let txn = self.indexes.read_txn()?;
+        let iter = self.indexes.atc_iter(
+            addr.author,
+            b'd',
+            addr.d.as_slice(),
+            Time::min(),
+            Time::max(),
+            &txn,
+        )?;
+
+        for result in iter {
+            let (_key, offset) = result?;
+            let event = unsafe { self.events.get_event_by_offset(offset as usize)? };
+
+            // the atc index doesn't have kind, so we have to compare the kinds
+            if event.kind() != addr.kind {
+                continue;
+            }
+
+            return Ok(Some(event));
+        }
+
+        Ok(None)
     }
 
     /// Remove an event by id.
