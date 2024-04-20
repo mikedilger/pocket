@@ -2,7 +2,7 @@ use crate::error::Error;
 use heed::byteorder::BigEndian;
 use heed::types::{Bytes, Unit, U64};
 use heed::{Database, Env, EnvFlags, EnvOpenOptions, RoIter, RoRange, RoTxn, RwTxn};
-use pocket_types::{Event, Id, Kind, Pubkey, Time};
+use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
 use std::ops::{Bound, Deref};
 use std::path::Path;
 
@@ -39,6 +39,9 @@ pub struct IndexStats {
 
     /// Number of entries in the deleted IDs index
     pub deleted_index_entries: u64,
+
+    /// Number of entries in the deleted naddr index
+    pub deleted_naddr_index_entries: u64,
 }
 
 impl IndexStats {
@@ -81,6 +84,11 @@ impl IndexStats {
     pub fn deleted_index_bytes(&self) -> u64 {
         self.deleted_index_entries * 32
     }
+
+    /// bytes used by the deleted naddr index
+    pub fn deleted_naddr_index_bytes(&self) -> u64 {
+        self.deleted_naddr_index_entries * (2 + 32 + 1 + 182)
+    }
 }
 
 #[derive(Debug)]
@@ -95,6 +103,7 @@ pub struct Lmdb {
     atc_index: Database<Bytes, U64<BigEndian>>,
     ktc_index: Database<Bytes, U64<BigEndian>>,
     deleted_ids: Database<Bytes, Unit>,
+    deleted_naddrs: Database<Bytes, U64<BigEndian>>, // value is Time
 }
 
 impl Lmdb {
@@ -154,6 +163,11 @@ impl Lmdb {
             .types::<Bytes, Unit>()
             .name("deleted-ids")
             .create(&mut txn)?;
+        let deleted_naddrs = env
+            .database_options()
+            .types::<Bytes, U64<BigEndian>>()
+            .name("deleted-naddrs")
+            .create(&mut txn)?;
         txn.commit()?;
 
         let lmdb = Lmdb {
@@ -167,6 +181,7 @@ impl Lmdb {
             atc_index,
             ktc_index,
             deleted_ids,
+            deleted_naddrs,
         };
 
         Ok(lmdb)
@@ -203,6 +218,7 @@ impl Lmdb {
             atc_index_entries: self.atc_index.len(&txn)?,
             ktc_index_entries: self.ktc_index.len(&txn)?,
             deleted_index_entries: self.deleted_ids.len(&txn)?,
+            deleted_naddr_index_entries: self.deleted_naddrs.len(&txn)?,
         })
     }
 
@@ -365,6 +381,26 @@ impl Lmdb {
         Ok(())
     }
 
+    pub fn mark_naddr_deleted(
+        &self,
+        txn: &mut RwTxn<'_>,
+        addr: &Addr,
+        when: Time,
+    ) -> Result<(), Error> {
+        let key = Self::key_naddr_index(addr);
+        self.deleted_naddrs.put(txn, &key, &when.as_u64())?;
+        Ok(())
+    }
+
+    pub fn when_is_naddr_deleted(
+        &self,
+        txn: &RoTxn<'_>,
+        addr: &Addr,
+    ) -> Result<Option<Time>, Error> {
+        let key = Self::key_naddr_index(addr);
+        Ok(self.deleted_naddrs.get(txn, &key)?.map(Time::from_u64))
+    }
+
     pub fn dump_deleted(&self) -> Result<Vec<Id>, Error> {
         let mut output: Vec<Id> = Vec::new();
         let txn = self.read_txn()?;
@@ -372,6 +408,21 @@ impl Lmdb {
             let (key, _val) = i?;
             let id = key[0..32].try_into().unwrap(); //.into();
             output.push(id);
+        }
+        Ok(output)
+    }
+
+    pub fn dump_naddr_deleted(&self) -> Result<Vec<(Addr, Time)>, Error> {
+        let mut output: Vec<(Addr, Time)> = Vec::new();
+        let txn = self.read_txn()?;
+        for i in self.deleted_naddrs.iter(&txn)? {
+            let (key, val) = i?;
+            let kind = u16::from_be_bytes(key[0..2].try_into().unwrap()).into();
+            let author = Pubkey::from_bytes(key[2..34].try_into().unwrap());
+            let mut d = key[35..35 + 182].to_owned();
+            let when = Time::from_u64(val);
+            d.truncate(key[34] as usize);
+            output.push((Addr { kind, author, d }, when));
         }
         Ok(output)
     }
@@ -610,6 +661,30 @@ impl Lmdb {
         }
         key.extend((u64::MAX - *created_at.deref()).to_be_bytes().as_slice());
         key.extend(id.as_slice());
+        key
+    }
+
+    fn key_naddr_index(addr: &Addr) -> Vec<u8> {
+        // kind(2) + author(32) + dlength(1) + d(182)  = 217
+        // value is Time(8)
+
+        const PADLEN: usize = 182;
+        let mut key: Vec<u8> = Vec::with_capacity(
+            std::mem::size_of::<Kind>()
+                + std::mem::size_of::<Pubkey>()
+                + 1 // dlength
+                + PADLEN,
+        );
+        key.extend(addr.kind.deref().to_be_bytes());
+        key.extend(addr.author.as_slice());
+        let dlen = std::cmp::min(addr.d.len(), 182);
+        key.extend(&[dlen as u8]); // the length itself in one byte
+        if dlen <= PADLEN {
+            key.extend(addr.d.as_slice());
+            key.extend(core::iter::repeat(0).take(PADLEN - dlen));
+        } else {
+            key.extend(&addr.d[..PADLEN]);
+        }
         key
     }
 }
