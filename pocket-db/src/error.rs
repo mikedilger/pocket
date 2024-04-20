@@ -29,7 +29,9 @@ pub enum InnerError {
     Lmdb(heed::Error),
     Io(std::io::Error),
     PocketTypes(pocket_types::Error),
+    Replaced,
     Scraper,
+    WrongEventKind,
 }
 
 impl std::fmt::Display for InnerError {
@@ -42,7 +44,9 @@ impl std::fmt::Display for InnerError {
             InnerError::Io(e) => write!(f, "I/O: {e}"),
             InnerError::Lmdb(e) => write!(f, "LMDB: {e}"),
             InnerError::PocketTypes(e) => write!(f, "types: {e}"),
+            InnerError::Replaced => write!(f, "Event was previously replaced"),
             InnerError::Scraper => write!(f, "scraper"),
+            InnerError::WrongEventKind => write!(f, "Wrong event kind"),
         }
     }
 }
