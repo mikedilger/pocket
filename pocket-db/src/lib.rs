@@ -56,7 +56,7 @@ impl Store {
 
     /// Rebuild the database
     ///
-    /// This compacts the database by removing deleted entries, and reindexes everything.
+    /// This compacts the database by removing unreferenced entries, and reindexes everything.
     ///
     /// # Safety
     /// Do not run while the database is in use.
@@ -113,6 +113,13 @@ impl Store {
         let mut deleted = old_store.indexes.dump_deleted()?;
         for id in deleted.drain(..) {
             new_store.indexes.mark_deleted(&mut new_txn, id)?;
+        }
+
+        let mut naddr_deleted = old_store.indexes.dump_naddr_deleted()?;
+        for (addr, when) in naddr_deleted.drain(..) {
+            new_store
+                .indexes
+                .mark_naddr_deleted(&mut new_txn, &addr, when)?;
         }
 
         new_txn.commit()?;
