@@ -700,4 +700,72 @@ impl Store {
 
         Ok(())
     }
+
+    // Remove all replaceable events with the matching author-kind
+    // Kind must be a replaceable (not parameterized replaceable) event kind
+    fn remove_replaceable(
+        &self,
+        txn: &mut RwTxn<'_>,
+        author: Pubkey,
+        kind: Kind,
+        until: Time,
+    ) -> Result<(), Error> {
+        if !kind.is_replaceable() {
+            return Err(InnerError::WrongEventKind.into());
+        }
+
+        let loop_txn = self.indexes.read_txn()?;
+        let iter = self
+            .indexes
+            .akc_iter(author, kind, Time::min(), until, &loop_txn)?;
+
+        for result in iter {
+            let (_key, offset) = result?;
+
+            // Remove the event (this deindexes)
+            self.remove_by_offset(txn, offset)?;
+        }
+
+        Ok(())
+    }
+
+    // Remove all parameterized-replaceable events with the matching author-kind-d
+    // Kind must be a paramterized-replaceable event kind
+    fn remove_parameterized_replaceable(
+        &self,
+        txn: &mut RwTxn<'_>,
+        addr: &Addr,
+        until: Time,
+    ) -> Result<(), Error> {
+        if !addr.kind.is_parameterized_replaceable() {
+            return Err(InnerError::WrongEventKind.into());
+        }
+
+        let loop_txn = self.indexes.read_txn()?;
+        let iter = self.indexes.atc_iter(
+            addr.author,
+            b'd',
+            addr.d.as_slice(),
+            Time::min(),
+            until,
+            &loop_txn,
+        )?;
+
+        for result in iter {
+            let (_key, offset) = result?;
+
+            // Our index doesn't have Kind embedded, so we have to check it
+            let matches = {
+                let event = self.get_event_by_offset(offset)?;
+                event.kind() == addr.kind
+            };
+
+            if matches {
+                // Remove the event (this deindexes)
+                self.remove_by_offset(txn, offset)?;
+            }
+        }
+
+        Ok(())
+    }
 }
