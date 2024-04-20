@@ -272,6 +272,30 @@ impl Store {
                             }
                         }
                     }
+                } else if tagname == b"a" {
+                    if let Some(naddr_bytes) = tag.next() {
+                        if let Ok(addr) = Addr::try_from_bytes(naddr_bytes) {
+                            // Mark deleted
+                            self.indexes
+                                .mark_naddr_deleted(txn, &addr, event.created_at())?;
+
+                            // Remove events (up to the created_at of the deletion event)
+                            if addr.kind.is_replaceable() {
+                                self.remove_replaceable(
+                                    txn,
+                                    addr.author,
+                                    addr.kind,
+                                    event.created_at(),
+                                )?;
+                            } else if addr.kind.is_parameterized_replaceable() {
+                                self.remove_parameterized_replaceable(
+                                    txn,
+                                    &addr,
+                                    event.created_at(),
+                                )?;
+                            }
+                        }
+                    }
                 }
             }
         }
