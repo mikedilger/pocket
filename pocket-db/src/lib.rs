@@ -157,10 +157,40 @@ impl Store {
 
         // Handle deleted events
         {
-            // Reject event if it was deleted
-            {
-                if self.indexes.is_deleted(&txn, event.id())? {
-                    return Err(InnerError::Deleted.into());
+            // Reject event if ID was deleted
+            if self.indexes.is_deleted(&txn, event.id())? {
+                return Err(InnerError::Deleted.into());
+            }
+
+            // Reject event if ADDR was deleted after it's created_at date
+            // (non-parameterized)
+            if event.kind().is_replaceable() {
+                let addr = Addr {
+                    kind: event.kind(),
+                    author: event.pubkey(),
+                    d: vec![],
+                };
+                if let Some(time) = self.indexes.when_is_naddr_deleted(&txn, &addr)? {
+                    if event.created_at() <= time {
+                        return Err(InnerError::Deleted.into());
+                    }
+                }
+            }
+
+            // Reject event if ADDR was deleted after it's created_at date
+            // (parameterized)
+            if event.kind().is_parameterized_replaceable() {
+                if let Some(identifier) = event.tags()?.get_value(b"d") {
+                    let addr = Addr {
+                        kind: event.kind(),
+                        author: event.pubkey(),
+                        d: identifier.to_owned(),
+                    };
+                    if let Some(time) = self.indexes.when_is_naddr_deleted(&txn, &addr)? {
+                        if event.created_at() <= time {
+                            return Err(InnerError::Deleted.into());
+                        }
+                    }
                 }
             }
         }
