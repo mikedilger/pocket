@@ -149,40 +149,42 @@ impl Store {
         // TBD: should we validate the event?
 
         let mut txn = self.indexes.write_txn()?;
-        let offset;
 
-        // Only if it doesn't already exist
-        if self.indexes.get_offset_by_id(&txn, event.id())?.is_none() {
+        // Return Duplicate if it already exists
+        if self.indexes.get_offset_by_id(&txn, event.id())?.is_some() {
+            return Err(InnerError::Duplicate.into());
+        }
+
+        // Handle deleted events
+        {
             // Reject event if it was deleted
             {
                 if self.indexes.is_deleted(&txn, event.id())? {
                     return Err(InnerError::Deleted.into());
                 }
             }
-
-            // Store the event
-            offset = self.events.store_event(event)? as u64;
-
-            // Index the event
-            if !event.kind().is_ephemeral() {
-                self.indexes.index(&mut txn, event, offset)?;
-            }
-
-            // If replaceable or parameterized replaceable,
-            // find and delete all but the first one in the group
-            if event.kind().is_replaceable() || event.kind().is_parameterized_replaceable() {
-                self.delete_replaced(&mut txn, event)?;
-            }
-
-            // Handle deletion events
-            if event.kind() == 5.into() {
-                self.handle_deletion_event(&mut txn, event)?;
-            }
-
-            txn.commit()?;
-        } else {
-            return Err(InnerError::Duplicate.into());
         }
+
+        // Store the event
+        let offset = self.events.store_event(event)? as u64;
+
+        // Index the event
+        if !event.kind().is_ephemeral() {
+            self.indexes.index(&mut txn, event, offset)?;
+        }
+
+        // If replaceable or parameterized replaceable,
+        // find and delete all but the first one in the group
+        if event.kind().is_replaceable() || event.kind().is_parameterized_replaceable() {
+            self.delete_replaced(&mut txn, event)?;
+        }
+
+        // Handle deletion events
+        if event.kind() == 5.into() {
+            self.handle_deletion_event(&mut txn, event)?;
+        }
+
+        txn.commit()?;
 
         Ok(offset)
     }
@@ -193,13 +195,13 @@ impl Store {
                 if tagname == b"e" {
                     if let Some(id_hex) = tag.next() {
                         if let Ok(id) = Id::read_hex(id_hex) {
-                            // Add deletion pair to the event_deleted table
+                            // Mark deleted
                             self.indexes.mark_deleted(txn, id)?;
 
-                            // Delete pair
+                            // Actually remove
                             if let Some(target) = self.get_event_by_id(id)? {
                                 if target.pubkey() == event.pubkey() {
-                                    self.delete_by_id(txn, id)?;
+                                    self.remove_by_id(txn, id)?;
                                 }
                             }
                         }
@@ -544,27 +546,27 @@ impl Store {
             .collect())
     }
 
-    /// Delete an event by id.
+    /// Remove an event by id.
     ///
     /// This deindexes the event.
     ///
     /// This does not add to the deleted_ids record, which is for events
     /// that are deleted by other events
-    fn delete_by_id(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
+    fn remove_by_id(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
         if let Some(offset) = self.indexes.get_offset_by_id(txn, id)? {
-            self.delete_by_offset(txn, offset)?;
+            self.remove_by_offset(txn, offset)?;
         }
 
         Ok(())
     }
 
-    /// Delete an event by offset.
+    /// Remove an event by offset.
     ///
     /// This deindexes the event.
     ///
     /// This does not add to the deleted_ids record, which is for events
     /// that are deleted by other events
-    fn delete_by_offset(&self, txn: &mut RwTxn<'_>, offset: u64) -> Result<(), Error> {
+    fn remove_by_offset(&self, txn: &mut RwTxn<'_>, offset: u64) -> Result<(), Error> {
         // Get event
         let event = unsafe { self.events.get_event_by_offset(offset as usize)? };
 
@@ -577,10 +579,10 @@ impl Store {
         Ok(())
     }
 
-    // This deletes an event without marking it as having been deleted by another event
-    pub fn delete_event(&self, id: Id) -> Result<(), Error> {
+    /// This removes an event without marking it as having been deleted by another event
+    pub fn remove_event(&self, id: Id) -> Result<(), Error> {
         let mut txn = self.indexes.write_txn()?;
-        self.delete_by_id(&mut txn, id)?;
+        self.remove_by_id(&mut txn, id)?;
         txn.commit()?;
         Ok(())
     }
@@ -608,7 +610,7 @@ impl Store {
                 let (_key, offset) = result?;
 
                 // Delete the event
-                self.delete_by_offset(txn, offset)?;
+                self.remove_by_offset(txn, offset)?;
             }
         } else if event.kind().is_parameterized_replaceable() {
             let tags = event.tags()?;
@@ -633,7 +635,7 @@ impl Store {
                     let (_key, offset) = result?;
 
                     // Delete the event
-                    self.delete_by_offset(txn, offset)?;
+                    self.remove_by_offset(txn, offset)?;
                 }
             }
         }
