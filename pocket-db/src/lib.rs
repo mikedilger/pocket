@@ -165,18 +165,54 @@ impl Store {
             }
         }
 
+        // Pre-remove replaceable events being replaced
+        {
+            if event.kind().is_replaceable() {
+                // Pre-remove any replaceable events that this replaces
+                self.remove_replaceable(
+                    &mut txn,
+                    event.pubkey(),
+                    event.kind(),
+                    event.created_at(),
+                )?;
+
+                // If any remaining matching replaceable events exist, then
+                // this event is invalid, return Replaced
+                if self
+                    .find_replaceable_event(event.pubkey(), event.kind())?
+                    .is_some()
+                {
+                    return Err(InnerError::Replaced.into());
+                }
+            }
+
+            if event.kind().is_parameterized_replaceable() {
+                let tags = event.tags()?;
+                if let Some(identifier) = tags.get_value(b"d") {
+                    let addr = Addr {
+                        kind: event.kind(),
+                        author: event.pubkey(),
+                        d: identifier.to_owned(),
+                    };
+
+                    // Pre-remove any parameterized-replaceable events that this replaces
+                    self.remove_parameterized_replaceable(&mut txn, &addr, Time::max())?;
+
+                    // If any remaining matching parameterized replaceable events exist, then
+                    // this event is invalid, return Replaced
+                    if self.find_parameterized_replaceable_event(&addr)?.is_some() {
+                        return Err(InnerError::Replaced.into());
+                    }
+                }
+            }
+        }
+
         // Store the event
         let offset = self.events.store_event(event)? as u64;
 
         // Index the event
         if !event.kind().is_ephemeral() {
             self.indexes.index(&mut txn, event, offset)?;
-        }
-
-        // If replaceable or parameterized replaceable,
-        // find and delete all but the first one in the group
-        if event.kind().is_replaceable() || event.kind().is_parameterized_replaceable() {
-            self.delete_replaced(&mut txn, event)?;
         }
 
         // Handle deletion events
@@ -642,62 +678,6 @@ impl Store {
         let mut txn = self.indexes.write_txn()?;
         self.remove_by_id(&mut txn, id)?;
         txn.commit()?;
-        Ok(())
-    }
-
-    // If the event is replaceable or parameterized replaceable
-    // this deletes all the events in that group except the most recent one.
-    fn delete_replaced(&self, txn: &mut RwTxn<'_>, event: &Event) -> Result<(), Error> {
-        if event.kind().is_replaceable() {
-            let loop_txn = self.indexes.read_txn()?;
-            let iter = self.indexes.akc_iter(
-                event.pubkey(),
-                event.kind(),
-                Time::min(),
-                Time::max(),
-                &loop_txn,
-            )?;
-            let mut first = true;
-            for result in iter {
-                // Keep the first result
-                if first {
-                    first = false;
-                    continue;
-                }
-
-                let (_key, offset) = result?;
-
-                // Delete the event
-                self.remove_by_offset(txn, offset)?;
-            }
-        } else if event.kind().is_parameterized_replaceable() {
-            let tags = event.tags()?;
-            if let Some(identifier) = tags.get_value(b"d") {
-                let loop_txn = self.indexes.read_txn()?;
-                let iter = self.indexes.atc_iter(
-                    event.pubkey(),
-                    b'd',
-                    identifier,
-                    Time::min(),
-                    Time::max(),
-                    &loop_txn,
-                )?;
-                let mut first = true;
-                for result in iter {
-                    // Keep the first result
-                    if first {
-                        first = false;
-                        continue;
-                    }
-
-                    let (_key, offset) = result?;
-
-                    // Delete the event
-                    self.remove_by_offset(txn, offset)?;
-                }
-            }
-        }
-
         Ok(())
     }
 
