@@ -40,6 +40,9 @@ impl Store {
         let mut indexes_path = directory.as_ref().to_path_buf();
         indexes_path.push("lmdb");
 
+        // Create the lmdb subdir if it doesn't exist, ignoring errors
+        let _ = std::fs::create_dir(&indexes_path);
+
         let events = EventStore::new(&events_path)?;
         let indexes = Lmdb::new(&indexes_path)?;
 
