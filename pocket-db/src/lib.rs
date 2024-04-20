@@ -276,6 +276,12 @@ impl Store {
         self.indexes.is_deleted(&txn, id)
     }
 
+    /// Is the naddr deleted, and if so, when?
+    pub fn naddr_is_deleted_asof(&self, addr: &Addr) -> Result<Option<Time>, Error> {
+        let txn = self.indexes.read_txn()?;
+        self.indexes.when_is_naddr_deleted(&txn, addr)
+    }
+
     /// Find all events that match the filter
     pub fn find_events<F>(
         &self,
