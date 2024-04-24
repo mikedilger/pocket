@@ -15,6 +15,13 @@ impl Pubkey {
         write_hex!(self.0, output, 32)
     }
 
+    /// Write to a hex String (allocates)
+    pub fn as_hex_string(&self) -> Result<String, Error> {
+        let mut buf: Vec<u8> = vec![0; 64];
+        self.write_hex(&mut buf).unwrap();
+        Ok(unsafe { String::from_utf8_unchecked(buf) })
+    }
+
     /// Read from input buffer in lowercase hex format
     pub fn read_hex(input: &[u8]) -> Result<Pubkey, Error> {
         let mut out: [u8; 32] = [0; 32];
