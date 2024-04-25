@@ -54,3 +54,19 @@ impl Sub<Time> for Time {
         Time(self.0 - rhs.0)
     }
 }
+
+impl Add<u64> for Time {
+    type Output = Time;
+
+    fn add(self, rhs: u64) -> Self::Output {
+        Time(self.0 + rhs)
+    }
+}
+
+impl Sub<u64> for Time {
+    type Output = Time;
+
+    fn sub(self, rhs: u64) -> Self::Output {
+        Time(self.0 - rhs)
+    }
+}
