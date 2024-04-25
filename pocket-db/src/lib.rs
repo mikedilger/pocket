@@ -269,6 +269,7 @@ impl Store {
 
                             // Actually remove
                             if let Some(target) = self.get_event_by_id(id)? {
+                                // author must match
                                 if target.pubkey() == event.pubkey() {
                                     self.remove_by_id(txn, id)?;
                                 }
@@ -278,24 +279,27 @@ impl Store {
                 } else if tagname == b"a" {
                     if let Some(naddr_bytes) = tag.next() {
                         if let Ok(addr) = Addr::try_from_bytes(naddr_bytes) {
-                            // Mark deleted
-                            self.indexes
-                                .mark_naddr_deleted(txn, &addr, event.created_at())?;
+                            // author must match
+                            if addr.author == event.pubkey() {
+                                // Mark deleted
+                                self.indexes
+                                    .mark_naddr_deleted(txn, &addr, event.created_at())?;
 
-                            // Remove events (up to the created_at of the deletion event)
-                            if addr.kind.is_replaceable() {
-                                self.remove_replaceable(
-                                    txn,
-                                    addr.author,
-                                    addr.kind,
-                                    event.created_at(),
-                                )?;
-                            } else if addr.kind.is_parameterized_replaceable() {
-                                self.remove_parameterized_replaceable(
-                                    txn,
-                                    &addr,
-                                    event.created_at(),
-                                )?;
+                                // Remove events (up to the created_at of the deletion event)
+                                if addr.kind.is_replaceable() {
+                                    self.remove_replaceable(
+                                        txn,
+                                        addr.author,
+                                        addr.kind,
+                                        event.created_at(),
+                                    )?;
+                                } else if addr.kind.is_parameterized_replaceable() {
+                                    self.remove_parameterized_replaceable(
+                                        txn,
+                                        &addr,
+                                        event.created_at(),
+                                    )?;
+                                }
                             }
                         }
                     }
