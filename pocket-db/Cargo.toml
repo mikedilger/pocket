@@ -13,4 +13,5 @@ mmap-append = "0.2"
 pocket-types = { path = "../pocket-types" }
 
 [dev-dependencies]
+secp256k1 = { version = "0.28", features = [ "hashes", "global-context", "rand-std" ] }
 tempfile = "3"
