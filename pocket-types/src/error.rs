@@ -23,7 +23,7 @@ impl std::fmt::Display for Error {
 #[derive(Debug)]
 pub enum InnerError {
     BadHexInput,
-    BufferTooSmall,
+    BufferTooSmall(usize),
     EndOfInput,
     General(String),
     TryFromSlice(std::array::TryFromSliceError),
@@ -33,7 +33,9 @@ impl std::fmt::Display for InnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             InnerError::BadHexInput => write!(f, "Bad hex input"),
-            InnerError::BufferTooSmall => write!(f, "Output buffer too small"),
+            InnerError::BufferTooSmall(u) => {
+                write!(f, "Output buffer too small, we require >={} bytes", u)
+            }
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
             InnerError::TryFromSlice(e) => write!(f, "slice error: {e}"),
