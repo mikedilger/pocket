@@ -17,5 +17,8 @@ pub use pubkey::Pubkey;
 mod sig;
 pub use sig::Sig;
 
+mod tags;
+pub use tags::{OwnedTags, Tags, TagsIter, TagsStringIter};
+
 mod time;
 pub use time::Time;
