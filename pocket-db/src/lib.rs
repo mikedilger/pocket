@@ -264,42 +264,46 @@ impl Store {
                 if tagname == b"e" {
                     if let Some(id_hex) = tag.next() {
                         if let Ok(id) = Id::read_hex(id_hex) {
-                            // Mark deleted
-                            self.indexes.mark_deleted(txn, id)?;
-
                             // Actually remove
                             if let Some(target) = self.get_event_by_id(id)? {
                                 // author must match
-                                if target.pubkey() == event.pubkey() {
-                                    self.remove_by_id(txn, id)?;
+                                if target.pubkey() != event.pubkey() {
+                                    return Err(InnerError::InvalidDelete.into());
                                 }
+                                self.remove_by_id(txn, id)?;
                             }
+
+                            // Mark deleted
+                            // NOTE: if we didn't have the target event, we presume this is valid,
+                            //       and if not, clients will just have to deal with that.
+                            self.indexes.mark_deleted(txn, id)?;
                         }
                     }
                 } else if tagname == b"a" {
                     if let Some(naddr_bytes) = tag.next() {
                         if let Ok(addr) = Addr::try_from_bytes(naddr_bytes) {
-                            // author must match
-                            if addr.author == event.pubkey() {
-                                // Mark deleted
-                                self.indexes
-                                    .mark_naddr_deleted(txn, &addr, event.created_at())?;
+                            if addr.author != event.pubkey() {
+                                return Err(InnerError::InvalidDelete.into());
+                            }
 
-                                // Remove events (up to the created_at of the deletion event)
-                                if addr.kind.is_replaceable() {
-                                    self.remove_replaceable(
-                                        txn,
-                                        addr.author,
-                                        addr.kind,
-                                        event.created_at(),
-                                    )?;
-                                } else if addr.kind.is_parameterized_replaceable() {
-                                    self.remove_parameterized_replaceable(
-                                        txn,
-                                        &addr,
-                                        event.created_at(),
-                                    )?;
-                                }
+                            // Mark deleted
+                            self.indexes
+                                .mark_naddr_deleted(txn, &addr, event.created_at())?;
+
+                            // Remove events (up to the created_at of the deletion event)
+                            if addr.kind.is_replaceable() {
+                                self.remove_replaceable(
+                                    txn,
+                                    addr.author,
+                                    addr.kind,
+                                    event.created_at(),
+                                )?;
+                            } else if addr.kind.is_parameterized_replaceable() {
+                                self.remove_parameterized_replaceable(
+                                    txn,
+                                    &addr,
+                                    event.created_at(),
+                                )?;
                             }
                         }
                     }
