@@ -75,7 +75,7 @@ fn make_event(
 fn setup(kind: Kind, tags: &[&[&str]], content: &str) -> (Store, Author, OwnedEvent, TempDir) {
     let when = Time::now();
     let tempdir = tempfile::tempdir().unwrap();
-    let store = Store::new(&tempdir).unwrap();
+    let store = Store::new(&tempdir, 0).unwrap();
     let author = make_author();
     let e = make_event(&author, kind, tags, content, Some(when)).unwrap();
     let _ = store.store_event(&e).unwrap();
@@ -249,7 +249,7 @@ fn test_find_parameterized_replaceable_event() {
 #[test]
 fn test_get_event_by_offset() {
     let tempdir = tempfile::tempdir().unwrap();
-    let store = Store::new(tempdir).unwrap();
+    let store = Store::new(tempdir, 0).unwrap();
     let author = make_author();
     let e = make_event(&author, 1.into(), &[TAG_CLIENT, TAG_E_TEST], "hi!", None).unwrap();
     let offset = store.store_event(&e).unwrap();
@@ -804,6 +804,22 @@ fn test_remove_event() {
     assert!(!store.has_event(e.id()).unwrap());
     let maybe_ecopy = store.get_event_by_id(e.id()).unwrap();
     assert!(maybe_ecopy.is_none());
+}
+
+#[test]
+fn test_extra_tables() {
+    let tempdir = tempfile::tempdir().unwrap();
+    let store = Store::new(&tempdir, 2).unwrap();
+
+    let t1 = store.extra_table(0).unwrap();
+    let mut txn = store.write_txn().unwrap();
+    t1.put(&mut txn, &[1, 2, 3], &[4, 5, 6]).unwrap();
+    txn.commit().unwrap();
+
+    let _ = store.extra_table(1).unwrap();
+
+    let t3 = store.extra_table(2);
+    assert!(t3.is_none());
 }
 
 /*

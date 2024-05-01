@@ -10,7 +10,8 @@ use lmdb::Lmdb;
 
 pub use heed;
 
-use crate::heed::{RoTxn, RwTxn};
+use crate::heed::types::Bytes;
+use crate::heed::{Database, RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
@@ -29,6 +30,7 @@ pub struct Store {
     events: EventStore,
     indexes: Lmdb,
     dir: PathBuf,
+    num_extra_tables: usize,
 }
 
 impl Store {
@@ -36,7 +38,10 @@ impl Store {
     ///
     /// The directory must already exist and be writable. If it already has storage,
     /// it will open that storage and use it. Otherwise it will create new storage.
-    pub fn new<P: AsRef<Path>>(directory: P) -> Result<Store, Error> {
+    ///
+    /// Pass in the number of extra key-value tables you want. You can use them for
+    /// any purpose, mapping opaque binary data to opaque binary data.
+    pub fn new<P: AsRef<Path>>(directory: P, num_extra_tables: usize) -> Result<Store, Error> {
         let dir = directory.as_ref().to_owned();
 
         // Create the directory if it doesn't exist, ignoring errors
@@ -52,12 +57,13 @@ impl Store {
         let _ = std::fs::create_dir(&indexes_path);
 
         let events = EventStore::new(&events_path)?;
-        let indexes = Lmdb::new(&indexes_path)?;
+        let indexes = Lmdb::new(&indexes_path, num_extra_tables)?;
 
         Ok(Store {
             events,
             indexes,
             dir,
+            num_extra_tables,
         })
     }
 
@@ -85,6 +91,7 @@ impl Store {
             events,
             indexes,
             dir,
+            num_extra_tables,
         } = self;
 
         indexes.sync()?;
@@ -113,23 +120,25 @@ impl Store {
 
         // Open old data
         let old_events = EventStore::new(&events_bak_path)?;
-        let old_indexes = Lmdb::new(&indexes_bak_path)?;
+        let old_indexes = Lmdb::new(&indexes_bak_path, num_extra_tables)?;
 
         // Open new data
         let new_events = EventStore::new(&events_path)?;
         let _ = std::fs::create_dir(&indexes_path);
-        let new_indexes = Lmdb::new(&indexes_path)?;
+        let new_indexes = Lmdb::new(&indexes_path, num_extra_tables)?;
 
         let old_store = Store {
             indexes: old_indexes,
             events: old_events,
             dir: dir.clone(),
+            num_extra_tables,
         };
 
         let new_store = Store {
             indexes: new_indexes,
             events: new_events,
             dir: dir.clone(),
+            num_extra_tables,
         };
 
         let old_txn = old_store.indexes.read_txn()?;
@@ -158,6 +167,8 @@ impl Store {
                 .indexes
                 .mark_naddr_deleted(&mut new_txn, &addr, when)?;
         }
+
+        // FIXME GINA copy the extra tables
 
         new_txn.commit()?;
 
@@ -872,5 +883,20 @@ impl Store {
         }
 
         Ok(())
+    }
+
+    /// Get access to an extra LMDB table
+    pub fn extra_table(&self, index: usize) -> Option<Database<Bytes, Bytes>> {
+        self.indexes.extra_table(index)
+    }
+
+    /// Get a read transaction for use with extra_table()
+    pub fn read_txn(&self) -> Result<RoTxn, Error> {
+        self.indexes.read_txn()
+    }
+
+    /// Get a write transaction for use with extra_table()
+    pub fn write_txn(&self) -> Result<RwTxn, Error> {
+        self.indexes.write_txn()
     }
 }

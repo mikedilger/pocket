@@ -104,15 +104,16 @@ pub struct Lmdb {
     ktc_index: Database<Bytes, U64<BigEndian>>,
     deleted_ids: Database<Bytes, Unit>,
     deleted_naddrs: Database<Bytes, U64<BigEndian>>, // value is Time
+    extra_tables: Vec<Database<Bytes, Bytes>>,
 }
 
 impl Lmdb {
-    pub fn new<P: AsRef<Path>>(directory: P) -> Result<Lmdb, Error> {
+    pub fn new<P: AsRef<Path>>(directory: P, num_extra_tables: usize) -> Result<Lmdb, Error> {
         let mut builder = EnvOpenOptions::new();
         unsafe {
             builder.flags(EnvFlags::NO_TLS);
         }
-        builder.max_dbs(32);
+        builder.max_dbs(10 + num_extra_tables as u32);
         builder.map_size(1048576 * 1024 * 24); // 24 GB
 
         let env = unsafe { builder.open(directory)? };
@@ -168,6 +169,17 @@ impl Lmdb {
             .types::<Bytes, U64<BigEndian>>()
             .name("deleted-naddrs")
             .create(&mut txn)?;
+
+        let mut extra_tables = Vec::with_capacity(num_extra_tables);
+        for i in 0..num_extra_tables {
+            extra_tables.push(
+                env.database_options()
+                    .types::<Bytes, Bytes>()
+                    .name(&format!("extra{}", i))
+                    .create(&mut txn)?,
+            );
+        }
+
         txn.commit()?;
 
         let lmdb = Lmdb {
@@ -182,6 +194,7 @@ impl Lmdb {
             ktc_index,
             deleted_ids,
             deleted_naddrs,
+            extra_tables,
         };
 
         Ok(lmdb)
@@ -425,6 +438,15 @@ impl Lmdb {
             output.push((Addr { kind, author, d }, when));
         }
         Ok(output)
+    }
+
+    /// Get access to an extra table
+    pub fn extra_table(&self, index: usize) -> Option<Database<Bytes, Bytes>> {
+        if index < self.extra_tables.len() {
+            Some(self.extra_tables[index])
+        } else {
+            None
+        }
     }
 
     pub fn i_iter<'a>(
