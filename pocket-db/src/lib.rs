@@ -8,7 +8,7 @@ mod lmdb;
 pub use lmdb::IndexStats;
 use lmdb::Lmdb;
 
-use heed::{RwTxn, RoTxn};
+use heed::{RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
@@ -35,10 +35,15 @@ impl Store {
     /// The directory must already exist and be writable. If it already has storage,
     /// it will open that storage and use it. Otherwise it will create new storage.
     pub fn new<P: AsRef<Path>>(directory: P) -> Result<Store, Error> {
-        let mut events_path = directory.as_ref().to_path_buf();
+        let dir = directory.as_ref().to_owned();
+
+        // Create the directory if it doesn't exist, ignoring errors
+        let _ = std::fs::create_dir(&dir);
+
+        let mut events_path = dir.clone();
         events_path.push("event.map");
 
-        let mut indexes_path = directory.as_ref().to_path_buf();
+        let mut indexes_path = dir.clone();
         indexes_path.push("lmdb");
 
         // Create the lmdb subdir if it doesn't exist, ignoring errors
@@ -47,7 +52,11 @@ impl Store {
         let events = EventStore::new(&events_path)?;
         let indexes = Lmdb::new(&indexes_path)?;
 
-        Ok(Store { events, indexes, dir: directory.as_ref().to_owned() })
+        Ok(Store {
+            events,
+            indexes,
+            dir,
+        })
     }
 
     /// Get directory where this store resides
@@ -69,21 +78,35 @@ impl Store {
     ///
     /// # Safety
     /// Do not run while the database is in use.
-    pub unsafe fn rebuild<P: AsRef<Path>>(directory: P) -> Result<(), Error> {
-        let mut events_path = directory.as_ref().to_path_buf();
+    pub unsafe fn rebuild(self) -> Result<Store, Error> {
+        let Store {
+            events,
+            indexes,
+            dir,
+        } = self;
+
+        indexes.sync()?;
+        drop(events);
+        drop(indexes);
+
+        println!("{}", dir.display());
+        let dir = dir.clone();
+
+        let mut events_path = dir.clone();
         events_path.push("event.map");
 
-        let mut indexes_path = directory.as_ref().to_path_buf();
+        let mut indexes_path = dir.clone();
         indexes_path.push("lmdb");
 
-        let mut events_bak_path = directory.as_ref().to_path_buf();
+        let mut events_bak_path = dir.clone();
         events_bak_path.push("event.map.bak");
 
-        let mut indexes_bak_path = directory.as_ref().to_path_buf();
+        let mut indexes_bak_path = dir.clone();
         indexes_bak_path.push("lmdb.bak");
 
         // Backup existing data (moving out of the way)
         fs::rename(&events_path, &events_bak_path)?;
+
         fs::rename(&indexes_path, &indexes_bak_path)?;
 
         // Open old data
@@ -92,18 +115,19 @@ impl Store {
 
         // Open new data
         let new_events = EventStore::new(&events_path)?;
+        let _ = std::fs::create_dir(&indexes_path);
         let new_indexes = Lmdb::new(&indexes_path)?;
 
         let old_store = Store {
             indexes: old_indexes,
             events: old_events,
-            dir: directory.as_ref().to_owned(),
+            dir: dir.clone(),
         };
 
         let new_store = Store {
             indexes: new_indexes,
             events: new_events,
-            dir: directory.as_ref().to_owned(),
+            dir: dir.clone(),
         };
 
         let old_txn = old_store.indexes.read_txn()?;
@@ -137,7 +161,7 @@ impl Store {
 
         new_store.indexes.sync()?;
 
-        Ok(())
+        Ok(new_store)
     }
 
     /// Sync the data to disk. This happens periodically, but sometimes it's useful to force
@@ -241,7 +265,10 @@ impl Store {
 
                     // If any remaining matching parameterized replaceable events exist, then
                     // this event is invalid, return Replaced
-                    if self.find_parameterized_replaceable_event_inner(&txn, &addr)?.is_some() {
+                    if self
+                        .find_parameterized_replaceable_event_inner(&txn, &addr)?
+                        .is_some()
+                    {
                         return Err(InnerError::Replaced.into());
                     }
                 }
