@@ -8,7 +8,7 @@ mod lmdb;
 pub use lmdb::IndexStats;
 use lmdb::Lmdb;
 
-use heed::RwTxn;
+use heed::{RwTxn, RoTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
@@ -212,7 +212,7 @@ impl Store {
                 // If any remaining matching replaceable events exist, then
                 // this event is invalid, return Replaced
                 if self
-                    .find_replaceable_event(event.pubkey(), event.kind())?
+                    .find_replaceable_event_inner(&txn, event.pubkey(), event.kind())?
                     .is_some()
                 {
                     return Err(InnerError::Replaced.into());
@@ -233,7 +233,7 @@ impl Store {
 
                     // If any remaining matching parameterized replaceable events exist, then
                     // this event is invalid, return Replaced
-                    if self.find_parameterized_replaceable_event(&addr)?.is_some() {
+                    if self.find_parameterized_replaceable_event_inner(&txn, &addr)?.is_some() {
                         return Err(InnerError::Replaced.into());
                     }
                 }
@@ -659,11 +659,20 @@ impl Store {
         author: Pubkey,
         kind: Kind,
     ) -> Result<Option<&Event>, Error> {
+        let txn = self.indexes.read_txn()?;
+        self.find_replaceable_event_inner(&txn, author, kind)
+    }
+
+    fn find_replaceable_event_inner(
+        &self,
+        txn: &RoTxn<'_>,
+        author: Pubkey,
+        kind: Kind,
+    ) -> Result<Option<&Event>, Error> {
         if !kind.is_replaceable() {
             return Err(InnerError::WrongEventKind.into());
         }
 
-        let txn = self.indexes.read_txn()?;
         let mut iter = self
             .indexes
             .akc_iter(author, kind, Time::min(), Time::max(), &txn)?;
@@ -682,11 +691,19 @@ impl Store {
         &self,
         addr: &Addr,
     ) -> Result<Option<&Event>, Error> {
+        let txn = self.indexes.read_txn()?;
+        self.find_parameterized_replaceable_event_inner(&txn, addr)
+    }
+
+    fn find_parameterized_replaceable_event_inner(
+        &self,
+        txn: &RoTxn<'_>,
+        addr: &Addr,
+    ) -> Result<Option<&Event>, Error> {
         if !addr.kind.is_parameterized_replaceable() {
             return Err(InnerError::WrongEventKind.into());
         }
 
-        let txn = self.indexes.read_txn()?;
         let iter = self.indexes.atc_iter(
             addr.author,
             b'd',
