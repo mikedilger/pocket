@@ -2,6 +2,7 @@ use super::json_escape::json_unescape;
 use super::put;
 use crate::error::{Error, InnerError};
 
+/// Consume whitespace in input by moving inposp forward.
 #[inline]
 pub fn eat_whitespace(input: &[u8], inposp: &mut usize) {
     while *inposp < input.len() && [0x20, 0x09, 0x0A, 0x0D].contains(&input[*inposp]) {
@@ -16,6 +17,7 @@ pub fn eat_whitespace_and_commas(input: &[u8], inposp: &mut usize) {
     }
 }
 
+/// Verify the next input character is as specified and move inposp past it
 #[inline]
 pub fn verify_char(input: &[u8], ch: u8, inposp: &mut usize) -> Result<(), Error> {
     if *inposp >= input.len() {

@@ -15,7 +15,7 @@ pub use filter::{Filter, OwnedFilter};
 mod id;
 pub use id::Id;
 
-mod json;
+pub mod json;
 
 mod kind;
 pub use kind::Kind;
