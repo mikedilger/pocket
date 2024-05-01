@@ -12,7 +12,7 @@ use heed::{RwTxn, RoTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct Stats {
     /// The number of bytes storing the events themselves
@@ -26,6 +26,7 @@ pub struct Stats {
 pub struct Store {
     events: EventStore,
     indexes: Lmdb,
+    dir: PathBuf,
 }
 
 impl Store {
@@ -46,7 +47,12 @@ impl Store {
         let events = EventStore::new(&events_path)?;
         let indexes = Lmdb::new(&indexes_path)?;
 
-        Ok(Store { events, indexes })
+        Ok(Store { events, indexes, dir: directory.as_ref().to_owned() })
+    }
+
+    /// Get directory where this store resides
+    pub fn dir(&self) -> &Path {
+        &self.dir
     }
 
     /// Get database statistics
@@ -91,11 +97,13 @@ impl Store {
         let old_store = Store {
             indexes: old_indexes,
             events: old_events,
+            dir: directory.as_ref().to_owned(),
         };
 
         let new_store = Store {
             indexes: new_indexes,
             events: new_events,
+            dir: directory.as_ref().to_owned(),
         };
 
         let old_txn = old_store.indexes.read_txn()?;
