@@ -710,7 +710,7 @@ impl Store {
 
         let mut iter = self
             .indexes
-            .akc_iter(author, kind, Time::min(), Time::max(), &txn)?;
+            .akc_iter(author, kind, Time::min(), Time::max(), txn)?;
 
         if let Some(result) = iter.next() {
             let (_key, offset) = result?;
@@ -745,7 +745,7 @@ impl Store {
             addr.d.as_slice(),
             Time::min(),
             Time::max(),
-            &txn,
+            txn,
         )?;
 
         for result in iter {

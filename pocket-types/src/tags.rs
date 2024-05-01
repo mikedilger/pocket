@@ -52,6 +52,11 @@ impl Tags {
         Ok(Self::from_inner(&input[0..len]))
     }
 
+    /// Copy to an allocated owned data type
+    pub fn to_owned(&self) -> OwnedTags {
+        OwnedTags(self.0.to_owned())
+    }
+
     /// Parse JSON input into a Tags.
     ///
     /// Returns the count of consumed input bytes and the Tags

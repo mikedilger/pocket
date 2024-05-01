@@ -54,6 +54,11 @@ impl Event {
         Ok(Self::from_inner(&input[0..len]))
     }
 
+    /// Copy to an allocated owned data type
+    pub fn to_owned(&self) -> OwnedEvent {
+        OwnedEvent(self.0.to_owned())
+    }
+
     /// Parse JSON input into an Event.
     ///
     /// Returns the count of consumed input bytes and the Event

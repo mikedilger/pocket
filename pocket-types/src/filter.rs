@@ -65,6 +65,11 @@ impl Filter {
         Ok(Self::from_inner(&input[0..len]))
     }
 
+    /// Copy to an allocated owned data type
+    pub fn to_owned(&self) -> OwnedFilter {
+        OwnedFilter(self.0.to_owned())
+    }
+
     /// Build a filter from parts
     #[allow(clippy::too_many_arguments)]
     pub fn from_parts<'a>(
