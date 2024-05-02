@@ -1,3 +1,7 @@
+// Copyright 2024 Pocket Developers (see https://github.com/mikedilger/pocket)
+// Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>
+// This file may not be copied, modified, or distributed except according to those terms.
+
 mod error;
 pub use error::{Error, InnerError};
 

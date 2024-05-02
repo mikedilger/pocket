@@ -1,3 +1,7 @@
+// Copyright 2024 pocket developers (see https://github.com/mikedilger/pocket)
+// Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>
+// This file may not be copied, modified, or distributed except according to those terms.
+
 include!("macros.rs");
 
 mod addr;
