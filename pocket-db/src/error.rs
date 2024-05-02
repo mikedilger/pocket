@@ -26,7 +26,7 @@ pub enum InnerError {
     Duplicate,
     EndOfInput,
     General(String),
-    Lmdb(heed::Error),
+    Lmdb(crate::heed::Error),
     InvalidDelete,
     Io(std::io::Error),
     PocketTypes(pocket_types::Error),
@@ -101,9 +101,9 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<heed::Error> for Error {
+impl From<crate::heed::Error> for Error {
     #[track_caller]
-    fn from(err: heed::Error) -> Self {
+    fn from(err: crate::heed::Error) -> Self {
         Error {
             inner: InnerError::Lmdb(err),
             location: std::panic::Location::caller(),

@@ -1,7 +1,7 @@
 use crate::error::Error;
-use heed::byteorder::BigEndian;
-use heed::types::{Bytes, Unit, U64};
-use heed::{Database, Env, EnvFlags, EnvOpenOptions, RoIter, RoRange, RoTxn, RwTxn};
+use crate::heed::byteorder::BigEndian;
+use crate::heed::types::{Bytes, Unit, U64};
+use crate::heed::{Database, Env, EnvFlags, EnvOpenOptions, RoIter, RoRange, RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
 use std::ops::{Bound, Deref};
 use std::path::Path;

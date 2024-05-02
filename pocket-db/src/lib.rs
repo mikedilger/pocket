@@ -8,7 +8,9 @@ mod lmdb;
 pub use lmdb::IndexStats;
 use lmdb::Lmdb;
 
-use heed::{RoTxn, RwTxn};
+pub use heed;
+
+use crate::heed::{RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
