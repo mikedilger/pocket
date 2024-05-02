@@ -42,8 +42,8 @@ pub fn json_escape(input: &[u8], mut out: Vec<u8>) -> Result<Vec<u8>, Error> {
 macro_rules! output_slice {
     ($slice:expr, $out:expr, $pos:expr) => {
         if $out.len() < *$pos + $slice.len() {
-            Err(Into::<crate::error::Error>::into(
-                crate::error::InnerError::BufferTooSmall(*$pos + $slice.len()),
+            Err(Into::<$crate::error::Error>::into(
+                $crate::error::InnerError::BufferTooSmall(*$pos + $slice.len()),
             ))
         } else {
             $out[*$pos..*$pos + $slice.len()].copy_from_slice($slice);
@@ -56,8 +56,8 @@ macro_rules! output_slice {
 macro_rules! output_byte {
     ($byte:expr, $out:expr, $pos:expr) => {
         if $out.len() < *$pos + 1 {
-            Err(Into::<crate::error::Error>::into(
-                crate::error::InnerError::BufferTooSmall(*$pos + 1),
+            Err(Into::<$crate::error::Error>::into(
+                $crate::error::InnerError::BufferTooSmall(*$pos + 1),
             ))
         } else {
             unsafe { *$out.get_unchecked_mut(*$pos) = $byte };

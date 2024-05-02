@@ -6,6 +6,7 @@ use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
 use std::ops::{Bound, Deref};
 use std::path::Path;
 
+#[derive(Debug, Clone, Copy)]
 pub struct IndexStats {
     /// This is the bytes used on disk (disk file is sparse and may show as much larger)
     pub disk_usage: u64,
@@ -92,7 +93,7 @@ impl IndexStats {
 }
 
 #[derive(Debug)]
-pub struct Lmdb {
+pub(crate) struct Lmdb {
     env: Env,
     general: Database<Bytes, Bytes>,
     i_index: Database<Bytes, U64<BigEndian>>,
@@ -108,13 +109,17 @@ pub struct Lmdb {
 }
 
 impl Lmdb {
-    pub fn new<P: AsRef<Path>>(directory: P, num_extra_tables: usize) -> Result<Lmdb, Error> {
+    pub(crate) fn new<P: AsRef<Path>>(
+        directory: P,
+        num_extra_tables: usize,
+    ) -> Result<Lmdb, Error> {
         let mut builder = EnvOpenOptions::new();
         unsafe {
-            builder.flags(EnvFlags::NO_TLS);
+            let _ = builder.flags(EnvFlags::NO_TLS);
         }
-        builder.max_dbs(10 + num_extra_tables as u32);
-        builder.map_size(1048576 * 1024 * 24); // 24 GB
+        let _ = builder
+            .max_dbs(10 + num_extra_tables as u32)
+            .map_size(1048576 * 1024 * 24); // 24 GB
 
         let env = unsafe { builder.open(directory)? };
 
@@ -202,22 +207,22 @@ impl Lmdb {
 
     /// Sync the data to disk. This happens periodically, but sometimes it's useful to force
     /// it.
-    pub fn sync(&self) -> Result<(), Error> {
+    pub(crate) fn sync(&self) -> Result<(), Error> {
         self.env.force_sync()?;
         Ok(())
     }
 
     /// Get a read transaction
-    pub fn read_txn(&self) -> Result<RoTxn, Error> {
+    pub(crate) fn read_txn(&self) -> Result<RoTxn, Error> {
         Ok(self.env.read_txn()?)
     }
 
     /// Get a write transaction
-    pub fn write_txn(&self) -> Result<RwTxn, Error> {
+    pub(crate) fn write_txn(&self) -> Result<RwTxn, Error> {
         Ok(self.env.write_txn()?)
     }
 
-    pub fn stats(&self) -> Result<IndexStats, Error> {
+    pub(crate) fn stats(&self) -> Result<IndexStats, Error> {
         let txn = self.read_txn()?;
         Ok(IndexStats {
             disk_usage: self.env.real_disk_size()?,
@@ -236,7 +241,12 @@ impl Lmdb {
     }
 
     // Index the event
-    pub fn index(&self, txn: &mut RwTxn<'_>, event: &Event, offset: u64) -> Result<(), Error> {
+    pub(crate) fn index(
+        &self,
+        txn: &mut RwTxn<'_>,
+        event: &Event,
+        offset: u64,
+    ) -> Result<(), Error> {
         // Index by id
         self.i_index.put(txn, event.id().as_slice(), &offset)?;
 
@@ -311,14 +321,14 @@ impl Lmdb {
     }
 
     // Remove the event from all indexes (except the 'id' index)
-    pub fn deindex(&self, txn: &mut RwTxn<'_>, event: &Event) -> Result<(), Error> {
+    pub(crate) fn deindex(&self, txn: &mut RwTxn<'_>, event: &Event) -> Result<(), Error> {
         for mut tsi in event.tags()?.iter() {
             if let Some(tagname) = tsi.next() {
                 // FIXME make sure it is a letter too
                 if tagname.len() == 1 {
                     if let Some(tagvalue) = tsi.next() {
                         // Index by author and tag (with created_at and id)
-                        self.atc_index.delete(
+                        let _ = self.atc_index.delete(
                             txn,
                             &Self::key_atc_index(
                                 event.pubkey(),
@@ -330,7 +340,7 @@ impl Lmdb {
                         )?;
 
                         // Index by kind and tag (with created_at and id)
-                        self.ktc_index.delete(
+                        let _ = self.ktc_index.delete(
                             txn,
                             &Self::key_ktc_index(
                                 event.kind(),
@@ -342,7 +352,7 @@ impl Lmdb {
                         )?;
 
                         // Index by tag (with created_at and id)
-                        self.tc_index.delete(
+                        let _ = self.tc_index.delete(
                             txn,
                             &Self::key_tc_index(
                                 tagname[0],
@@ -356,15 +366,16 @@ impl Lmdb {
             }
         }
 
-        self.ac_index.delete(
+        let _ = self.ac_index.delete(
             txn,
             &Self::key_ac_index(event.pubkey(), event.created_at(), event.id()),
         )?;
 
-        self.ci_index
+        let _ = self
+            .ci_index
             .delete(txn, &Self::key_ci_index(event.created_at(), event.id()))?;
 
-        self.akc_index.delete(
+        let _ = self.akc_index.delete(
             txn,
             &Self::key_akc_index(event.pubkey(), event.kind(), event.created_at(), event.id()),
         )?;
@@ -376,25 +387,25 @@ impl Lmdb {
         Ok(())
     }
 
-    pub fn deindex_id(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
-        self.i_index.delete(txn, id.as_slice())?;
+    pub(crate) fn deindex_id(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
+        let _ = self.i_index.delete(txn, id.as_slice())?;
         Ok(())
     }
 
-    pub fn get_offset_by_id(&self, txn: &RoTxn<'_>, id: Id) -> Result<Option<u64>, Error> {
+    pub(crate) fn get_offset_by_id(&self, txn: &RoTxn<'_>, id: Id) -> Result<Option<u64>, Error> {
         Ok(self.i_index.get(txn, id.as_slice())?)
     }
 
-    pub fn is_deleted(&self, txn: &RoTxn<'_>, id: Id) -> Result<bool, Error> {
+    pub(crate) fn is_deleted(&self, txn: &RoTxn<'_>, id: Id) -> Result<bool, Error> {
         Ok(self.deleted_ids.get(txn, id.as_slice())?.is_some())
     }
 
-    pub fn mark_deleted(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
+    pub(crate) fn mark_deleted(&self, txn: &mut RwTxn<'_>, id: Id) -> Result<(), Error> {
         self.deleted_ids.put(txn, id.as_slice(), &())?;
         Ok(())
     }
 
-    pub fn mark_naddr_deleted(
+    pub(crate) fn mark_naddr_deleted(
         &self,
         txn: &mut RwTxn<'_>,
         addr: &Addr,
@@ -405,7 +416,7 @@ impl Lmdb {
         Ok(())
     }
 
-    pub fn when_is_naddr_deleted(
+    pub(crate) fn when_is_naddr_deleted(
         &self,
         txn: &RoTxn<'_>,
         addr: &Addr,
@@ -414,7 +425,7 @@ impl Lmdb {
         Ok(self.deleted_naddrs.get(txn, &key)?.map(Time::from_u64))
     }
 
-    pub fn dump_deleted(&self) -> Result<Vec<Id>, Error> {
+    pub(crate) fn dump_deleted(&self) -> Result<Vec<Id>, Error> {
         let mut output: Vec<Id> = Vec::new();
         let txn = self.read_txn()?;
         for i in self.deleted_ids.iter(&txn)? {
@@ -425,7 +436,7 @@ impl Lmdb {
         Ok(output)
     }
 
-    pub fn dump_naddr_deleted(&self) -> Result<Vec<(Addr, Time)>, Error> {
+    pub(crate) fn dump_naddr_deleted(&self) -> Result<Vec<(Addr, Time)>, Error> {
         let mut output: Vec<(Addr, Time)> = Vec::new();
         let txn = self.read_txn()?;
         for i in self.deleted_naddrs.iter(&txn)? {
@@ -441,7 +452,7 @@ impl Lmdb {
     }
 
     /// Get access to an extra table
-    pub fn extra_table(&self, index: usize) -> Option<Database<Bytes, Bytes>> {
+    pub(crate) fn extra_table(&self, index: usize) -> Option<Database<Bytes, Bytes>> {
         if index < self.extra_tables.len() {
             Some(self.extra_tables[index])
         } else {
@@ -449,14 +460,14 @@ impl Lmdb {
         }
     }
 
-    pub fn i_iter<'a>(
+    pub(crate) fn i_iter<'a>(
         &'a self,
         txn: &'a RoTxn,
     ) -> Result<RoIter<'_, Bytes, U64<BigEndian>>, Error> {
         Ok(self.i_index.iter(txn)?)
     }
 
-    pub fn ci_iter<'a>(
+    pub(crate) fn ci_iter<'a>(
         &'a self,
         since: Time,
         until: Time,
@@ -471,7 +482,7 @@ impl Lmdb {
         Ok(self.ci_index.range(txn, &range)?)
     }
 
-    pub fn tc_iter<'a>(
+    pub(crate) fn tc_iter<'a>(
         &'a self,
         tagbyte: u8,
         tagvalue: &[u8],
@@ -493,7 +504,7 @@ impl Lmdb {
         Ok(self.tc_index.range(txn, &range)?)
     }
 
-    pub fn ac_iter<'a>(
+    pub(crate) fn ac_iter<'a>(
         &'a self,
         author: Pubkey,
         since: Time,
@@ -509,7 +520,7 @@ impl Lmdb {
         Ok(self.ac_index.range(txn, &range)?)
     }
 
-    pub fn akc_iter<'a>(
+    pub(crate) fn akc_iter<'a>(
         &'a self,
         author: Pubkey,
         kind: Kind,
@@ -526,7 +537,7 @@ impl Lmdb {
         Ok(self.akc_index.range(txn, &range)?)
     }
 
-    pub fn atc_iter<'a>(
+    pub(crate) fn atc_iter<'a>(
         &'a self,
         author: Pubkey,
         tagbyte: u8,
@@ -550,7 +561,7 @@ impl Lmdb {
         Ok(self.atc_index.range(txn, &range)?)
     }
 
-    pub fn ktc_iter<'a>(
+    pub(crate) fn ktc_iter<'a>(
         &'a self,
         kind: Kind,
         tagbyte: u8,

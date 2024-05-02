@@ -2,6 +2,25 @@
 // Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>
 // This file may not be copied, modified, or distributed except according to those terms.
 
+#![deny(
+    missing_debug_implementations,
+    trivial_numeric_casts,
+    clippy::string_slice,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    unused_lifetimes,
+    unused_labels,
+    unused_extern_crates,
+    non_ascii_idents,
+    keyword_idents,
+    deprecated_in_future,
+    unstable_features,
+    single_use_lifetimes,
+    unreachable_pub,
+    missing_copy_implementations,
+)]
+
 mod error;
 pub use error::{Error, InnerError};
 
@@ -21,6 +40,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, Copy)]
 pub struct Stats {
     /// The number of bytes storing the events themselves
     pub event_bytes: usize,
@@ -426,7 +446,7 @@ impl Store {
                 if let Some(event) = self.get_event_by_id(id)? {
                     // and check each against the rest of the filter
                     if filter.event_matches(event)? && screen(event) {
-                        output.insert(event);
+                        let _ = output.insert(event);
                     }
                 }
             }
@@ -458,7 +478,7 @@ impl Store {
                         // check against the rest of the filter
                         if filter.event_matches(event)? && screen(event) {
                             // Accept the event
-                            output.insert(event);
+                            let _ = output.insert(event);
                             paircount += 1;
 
                             // Stop this pair if limited
@@ -520,7 +540,7 @@ impl Store {
                                 // check against the rest of the filter
                                 if filter.event_matches(event)? && screen(event) {
                                     // Accept the event
-                                    output.insert(event);
+                                    let _ = output.insert(event);
                                     paircount += 1;
 
                                     // Stop this pair if limited
@@ -575,7 +595,7 @@ impl Store {
                                 // check against the rest of the filter
                                 if filter.event_matches(event)? && screen(event) {
                                     // Accept the event
-                                    output.insert(event);
+                                    let _ = output.insert(event);
                                     paircount += 1;
 
                                     // Stop this pair if limited
@@ -620,7 +640,7 @@ impl Store {
                             // check against the rest of the filter
                             if filter.event_matches(event)? && screen(event) {
                                 // Accept the event
-                                output.insert(event);
+                                let _ = output.insert(event);
                                 rangecount += 1;
 
                                 // Stop this limited
@@ -656,7 +676,7 @@ impl Store {
                     // check against the rest of the filter
                     if filter.event_matches(event)? && screen(event) {
                         // Accept the event
-                        output.insert(event);
+                        let _ = output.insert(event);
                         rangecount += 1;
 
                         // Stop this limited
@@ -691,7 +711,7 @@ impl Store {
                 let event = unsafe { self.events.get_event_by_offset(offset as usize)? };
 
                 if filter.event_matches(event)? && screen(event) {
-                    output.insert(event);
+                    let _ = output.insert(event);
                 }
             }
         }

@@ -252,7 +252,7 @@ impl Event {
                 if let Some(expires) = tag.next() {
                     // Interpret string as a u64
                     let mut p = 0;
-                    let time = super::json::json_parse::read_u64(expires, &mut p)?;
+                    let time = read_u64(expires, &mut p)?;
                     if time <= *Time::now().deref() {
                         return Ok(true);
                     }

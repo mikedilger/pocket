@@ -17,7 +17,7 @@ const EVENT_MAP_CHUNK: usize = 4096 * 1024; // grow by 4 megabytes at a time
 
 /// An EventStore is a fast storage facility for events.
 #[derive(Debug)]
-pub struct EventStore {
+pub(crate) struct EventStore {
     // the Mmap doesn't need us to keep the file, but we keep it for resizing.
     event_map_file: File,
     event_map_file_len: AtomicUsize,
@@ -30,7 +30,7 @@ pub struct EventStore {
 impl EventStore {
     /// Create a new `EventStore`. The `event_map_file` is the eventually large file
     /// that holds all the events.
-    pub fn new<P: AsRef<Path>>(event_map_file: P) -> Result<EventStore, Error> {
+    pub(crate) fn new<P: AsRef<Path>>(event_map_file: P) -> Result<EventStore, Error> {
         // Open the event map file, possibly creating if it isn't there
         let event_map_file = OpenOptions::new()
             .read(true)
@@ -66,12 +66,12 @@ impl EventStore {
 
     /// Get the number of bytes used in the event map
     #[inline]
-    pub fn read_event_map_end(&self) -> usize {
+    pub(crate) fn read_event_map_end(&self) -> usize {
         self.event_map.get_end()
     }
 
     /// Get an event by its offset in the map
-    pub unsafe fn get_event_by_offset(&self, offset: usize) -> Result<&Event, Error> {
+    pub(crate) unsafe fn get_event_by_offset(&self, offset: usize) -> Result<&Event, Error> {
         if offset >= self.read_event_map_end() {
             return Err(InnerError::EndOfInput.into());
         }
@@ -84,14 +84,14 @@ impl EventStore {
     // It does NOT check first if the event is already stored, so it could store a duplicate
     // It does NOT record the event into any indexes
     // But it does grow the file if needed and returns the offset where it was stored
-    pub fn store_event(&self, event: &Event) -> Result<usize, Error> {
+    pub(crate) fn store_event(&self, event: &Event) -> Result<usize, Error> {
         // Align to 8 bytes
         let mut end = self.event_map.get_end();
         if end % 8 != 0 {
             let padding = 8 - (end % 8);
             end += padding;
             assert_eq!(end % 8, 0);
-            self.event_map.append(padding, |_| Ok(padding))?;
+            let _ = self.event_map.append(padding, |_| Ok(padding))?;
         }
 
         let event_size = event.len();
@@ -137,7 +137,7 @@ impl EventStore {
 
     // we may use or expose this later
     #[allow(dead_code)]
-    pub fn iter(&self) -> EventStoreIter<'_> {
+    pub(crate) fn iter(&self) -> EventStoreIter<'_> {
         EventStoreIter {
             store: self,
             offset: mmap_append::HEADER_SIZE,
@@ -145,7 +145,7 @@ impl EventStore {
     }
 }
 
-pub struct EventStoreIter<'a> {
+pub(crate) struct EventStoreIter<'a> {
     store: &'a EventStore,
     offset: usize,
 }

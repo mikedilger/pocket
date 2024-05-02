@@ -11,7 +11,7 @@ pub fn eat_whitespace(input: &[u8], inposp: &mut usize) {
 }
 
 #[inline]
-pub fn eat_whitespace_and_commas(input: &[u8], inposp: &mut usize) {
+pub(crate) fn eat_whitespace_and_commas(input: &[u8], inposp: &mut usize) {
     while *inposp < input.len() && [0x20, 0x09, 0x0A, 0x0D, b','].contains(&input[*inposp]) {
         *inposp += 1;
     }
@@ -30,14 +30,14 @@ pub fn verify_char(input: &[u8], ch: u8, inposp: &mut usize) -> Result<(), Error
     }
 }
 
-pub fn eat_colon_with_whitespace(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn eat_colon_with_whitespace(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     eat_whitespace(input, inposp);
     verify_char(input, b':', inposp)?;
     eat_whitespace(input, inposp);
     Ok(())
 }
 
-pub fn next_object_field(input: &[u8], inposp: &mut usize) -> Result<bool, Error> {
+pub(crate) fn next_object_field(input: &[u8], inposp: &mut usize) -> Result<bool, Error> {
     eat_whitespace(input, inposp);
     // next comes either comma or end brace
     if *inposp >= input.len() {
@@ -54,7 +54,7 @@ pub fn next_object_field(input: &[u8], inposp: &mut usize) -> Result<bool, Error
     }
 }
 
-pub fn read_id(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(), Error> {
+pub(crate) fn read_id(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(), Error> {
     if output.len() < 32 {
         return Err(InnerError::BufferTooSmall(32).into());
     }
@@ -69,7 +69,11 @@ pub fn read_id(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<()
     Ok(())
 }
 
-pub fn read_pubkey(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(), Error> {
+pub(crate) fn read_pubkey(
+    input: &[u8],
+    inposp: &mut usize,
+    output: &mut [u8],
+) -> Result<(), Error> {
     if output.len() < 32 {
         return Err(InnerError::BufferTooSmall(32).into());
     }
@@ -84,7 +88,7 @@ pub fn read_pubkey(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Resul
     Ok(())
 }
 
-pub fn read_u64(input: &[u8], inposp: &mut usize) -> Result<u64, Error> {
+pub(crate) fn read_u64(input: &[u8], inposp: &mut usize) -> Result<u64, Error> {
     let mut value: u64 = 0;
     let mut any: bool = false;
     while *inposp < input.len() && b"0123456789".contains(&input[*inposp]) {
@@ -98,7 +102,7 @@ pub fn read_u64(input: &[u8], inposp: &mut usize) -> Result<u64, Error> {
     Ok(value)
 }
 
-pub fn read_kind(input: &[u8], inposp: &mut usize) -> Result<u16, Error> {
+pub(crate) fn read_kind(input: &[u8], inposp: &mut usize) -> Result<u16, Error> {
     let mut value: u32 = 0;
     let mut any: bool = false;
     while *inposp < input.len() && b"0123456789".contains(&input[*inposp]) {
@@ -122,7 +126,7 @@ pub fn read_kind(input: &[u8], inposp: &mut usize) -> Result<u16, Error> {
 
 // From the outer bracket through to the character after the close outer bracket
 // returns the size of data written to the output
-pub fn read_tags_array(
+pub(crate) fn read_tags_array(
     input: &[u8],
     inposp: &mut usize,
     output: &mut [u8],
@@ -200,7 +204,7 @@ pub fn read_tags_array(
 // From the first inner tag bracket, ending after the outer bracket.
 // This just counts the tags, it does not write output or modify the inpos
 // This does a quicker pass over the content than actual tag parsing does.
-pub fn count_tags(input: &[u8], mut inpos: usize) -> Result<usize, Error> {
+pub(crate) fn count_tags(input: &[u8], mut inpos: usize) -> Result<usize, Error> {
     // First non-whitespace character after the opening brace
     match input[inpos] {
         b']' => return Ok(0), // no tags
@@ -229,7 +233,7 @@ pub fn count_tags(input: &[u8], mut inpos: usize) -> Result<usize, Error> {
     }
 }
 
-pub fn read_tag(
+pub(crate) fn read_tag(
     input: &[u8],
     inposp: &mut usize,
     output: &mut [u8],
@@ -286,7 +290,7 @@ pub fn read_tag(
     Ok(())
 }
 
-pub fn read_content(
+pub(crate) fn read_content(
     input: &[u8],
     inposp: &mut usize,
     output: &mut [u8],
@@ -309,7 +313,7 @@ pub fn read_content(
 }
 
 // FIXME this is too event-offset specific
-pub fn read_sig(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(), Error> {
+pub(crate) fn read_sig(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(), Error> {
     if output.len() < 144 {
         return Err(InnerError::BufferTooSmall(144).into());
     }
@@ -326,7 +330,7 @@ pub fn read_sig(input: &[u8], inposp: &mut usize, output: &mut [u8]) -> Result<(
 
 // from the character after the start quote
 // ending on the character following the end quote
-pub fn burn_string(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_string(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     while *inposp < input.len() && input[*inposp] != b'"' {
         if input[*inposp] == b'\\' && *inposp + 1 < input.len() {
             *inposp += 2;
@@ -344,7 +348,7 @@ pub fn burn_string(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
 
 // from the character after the open brace
 // ending on the character following the close brace
-pub fn burn_tag(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_tag(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     eat_whitespace(input, inposp);
     // handle empty tag
     if input[*inposp] == b']' {
@@ -365,7 +369,7 @@ pub fn burn_tag(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn burn_key_and_value(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_key_and_value(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     verify_char(input, b'"', inposp)?;
     burn_string(input, inposp)?;
     eat_colon_with_whitespace(input, inposp)?;
@@ -375,7 +379,7 @@ pub fn burn_key_and_value(input: &[u8], inposp: &mut usize) -> Result<(), Error>
 
 // from the character after the open brace
 // ending on the character following the close brace
-pub fn burn_object(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_object(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     loop {
         eat_whitespace_and_commas(input, inposp);
 
@@ -391,7 +395,7 @@ pub fn burn_object(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
 
 // from the character after the open bracket
 // ending on the character following the close bracket
-pub fn burn_array(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_array(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     loop {
         eat_whitespace_and_commas(input, inposp);
 
@@ -405,7 +409,7 @@ pub fn burn_array(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     }
 }
 
-pub fn burn_value(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_value(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     if *inposp >= input.len() {
         return Err(InnerError::JsonBad("Too short burning an unused JSON value", *inposp).into());
     }
@@ -440,7 +444,7 @@ pub fn burn_value(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn burn_null(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_null(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     if *inposp + 4 <= input.len() && &input[*inposp..*inposp + 4] == b"null" {
         *inposp += 4;
         Ok(())
@@ -449,7 +453,7 @@ pub fn burn_null(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     }
 }
 
-pub fn burn_true(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_true(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     if *inposp + 4 <= input.len() && &input[*inposp..*inposp + 4] == b"true" {
         *inposp += 4;
         Ok(())
@@ -458,7 +462,7 @@ pub fn burn_true(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     }
 }
 
-pub fn burn_false(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_false(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     if *inposp + 5 <= input.len() && &input[*inposp..*inposp + 5] == b"false" {
         *inposp += 5;
         Ok(())
@@ -467,7 +471,7 @@ pub fn burn_false(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     }
 }
 
-pub fn burn_number(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
+pub(crate) fn burn_number(input: &[u8], inposp: &mut usize) -> Result<(), Error> {
     // For burning, we don't check validity.
     while *inposp < input.len() && b".+-0123456789abcdefABCDEF_oOxXn".contains(&input[*inposp]) {
         *inposp += 1;

@@ -2,7 +2,7 @@ use crate::error::{Error, InnerError};
 
 // Reads the next code point if UTF-8, and returns it along with the number of characters
 // that make it up.
-pub fn next_code_point(input: &[u8]) -> Result<Option<(u32, usize)>, Error> {
+pub(crate) fn next_code_point(input: &[u8]) -> Result<Option<(u32, usize)>, Error> {
     let len = input.len();
     if len < 1 {
         return Ok(None);
@@ -48,7 +48,7 @@ pub fn next_code_point(input: &[u8]) -> Result<Option<(u32, usize)>, Error> {
     }
 }
 
-pub fn encode_utf8(code: u32, dst: &mut [u8]) -> Result<usize, Error> {
+pub(crate) fn encode_utf8(code: u32, dst: &mut [u8]) -> Result<usize, Error> {
     // UTF-8 ranges and tags for encoding characters
     const TAG_CONT: u8 = 0b1000_0000;
     const TAG_TWO_B: u8 = 0b1100_0000;

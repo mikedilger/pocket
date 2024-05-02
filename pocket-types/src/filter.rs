@@ -455,7 +455,7 @@ pub struct FilterIdIter<'a> {
     next: usize,
 }
 
-impl<'a> Iterator for FilterIdIter<'a> {
+impl Iterator for FilterIdIter<'_> {
     type Item = Id;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -481,7 +481,7 @@ pub struct FilterAuthorIter<'a> {
     next: usize,
 }
 
-impl<'a> Iterator for FilterAuthorIter<'a> {
+impl Iterator for FilterAuthorIter<'_> {
     type Item = Pubkey;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -511,7 +511,7 @@ pub struct FilterKindIter<'a> {
     next: usize,
 }
 
-impl<'a> Iterator for FilterKindIter<'a> {
+impl Iterator for FilterKindIter<'_> {
     type Item = Kind;
 
     fn next(&mut self) -> Option<Self::Item> {
