@@ -1014,7 +1014,7 @@ mod test {
         assert_eq!(filter.until(), Time::max());
 
         let tags = filter.tags().unwrap();
-        assert_eq!(tags.len(), 1);
+        assert_eq!(tags.count(), 1);
         let mut iter = tags.iter();
         let mut tag = iter.next().unwrap();
         assert!(iter.next().is_none());

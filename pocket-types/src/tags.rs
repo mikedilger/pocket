@@ -145,13 +145,13 @@ impl Tags {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn count(&self) -> usize {
         parse_u16!(self.0, 2) as usize
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.count() == 0
     }
 
     pub fn iter(&self) -> TagsIter<'_> {
@@ -162,7 +162,7 @@ impl Tags {
     }
 
     pub fn get_string(&self, tag: usize, string: usize) -> Option<&[u8]> {
-        if tag >= self.len() {
+        if tag >= self.count() {
             return None;
         }
 
@@ -195,7 +195,7 @@ impl Tags {
     }
 
     pub fn get_value<'a>(&'a self, key: &[u8]) -> Option<&'a [u8]> {
-        for tag in 0..self.len() {
+        for tag in 0..self.count() {
             if let Some(thing) = self.get_string(tag, 0) {
                 if thing == key {
                     return self.get_string(tag, 1);
@@ -259,7 +259,7 @@ impl<'a> Iterator for TagsIter<'a> {
     type Item = TagsStringIter<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.next >= self.tags.len() {
+        if self.next >= self.tags.count() {
             None
         } else {
             let offset_slot = 4 + self.next * 2;
