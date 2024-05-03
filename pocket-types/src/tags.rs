@@ -69,6 +69,7 @@ impl Tags {
         Ok((inpos, Self::from_inner(&output_buffer[..tags_size])))
     }
 
+    /// Creates a set of tags from the parts into the output buffer.
     pub fn from_parts<'a, T: AsRef<[U]>, U: AsRef<str>>(
         parts: &[T],
         output: &'a mut [u8],
@@ -116,6 +117,7 @@ impl Tags {
         Ok(Self::from_inner(&output[..length]))
     }
 
+    /// The number of bytes needed to represent the tag parts supplied
     pub fn output_size_needed<T: AsRef<[U]>, U: AsRef<str>>(parts: &[T]) -> usize {
         let numtags = parts.len();
         let mut length = 4 + 2 * numtags; // for the header
@@ -131,6 +133,7 @@ impl Tags {
         length
     }
 
+    /// Copy the internal bytes
     pub fn copy(&self, output: &mut [u8]) -> Result<(), Error> {
         if output.len() < self.0.len() {
             return Err(InnerError::BufferTooSmall(self.0.len()).into());
@@ -139,21 +142,25 @@ impl Tags {
         Ok(())
     }
 
+    /// Internal bytes
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    /// How many tags are present
     #[inline]
     pub fn count(&self) -> usize {
         parse_u16!(self.0, 2) as usize
     }
 
+    /// Are the tags empty
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.count() == 0
     }
 
+    /// Create an iterator over the tags
     pub fn iter(&self) -> TagsIter<'_> {
         TagsIter {
             tags: self,
@@ -161,6 +168,7 @@ impl Tags {
         }
     }
 
+    /// Gets the string of tag number `tag` at offset `string`, or None
     pub fn get_string(&self, tag: usize, string: usize) -> Option<&[u8]> {
         if tag >= self.count() {
             return None;
@@ -194,6 +202,7 @@ impl Tags {
         Some(&self.0[offset..offset + len])
     }
 
+    /// Gets the value of a tag with the given key, or None
     pub fn get_value<'a>(&'a self, key: &[u8]) -> Option<&'a [u8]> {
         for tag in 0..self.count() {
             if let Some(thing) = self.get_string(tag, 0) {
@@ -205,6 +214,8 @@ impl Tags {
         None
     }
 
+    /// True if the tags contain a single-letter tag matching the letter with a value
+    /// matching the value
     pub fn matches(&self, letter: &[u8], value: &[u8]) -> bool {
         for mut tag in self.iter() {
             if tag.next() == Some(letter) && tag.next() == Some(value) {
@@ -214,6 +225,7 @@ impl Tags {
         false
     }
 
+    /// Generates JSON representing the tags
     pub fn as_json(&self) -> Vec<u8> {
         let mut output: Vec<u8> = Vec::with_capacity(256);
         let mut first = true;
@@ -249,6 +261,7 @@ impl fmt::Display for Tags {
     }
 }
 
+/// An iterator that iterates through the tags
 #[derive(Debug)]
 pub struct TagsIter<'a> {
     tags: &'a Tags,
@@ -276,6 +289,7 @@ impl<'a> Iterator for TagsIter<'a> {
     }
 }
 
+/// An iterator that iterates through the strings of a tag
 #[derive(Debug)]
 pub struct TagsStringIter<'a> {
     tags: &'a Tags,
@@ -301,10 +315,12 @@ impl<'a> Iterator for TagsStringIter<'a> {
     }
 }
 
+/// An owned set of tags
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedTags(Vec<u8>);
 
 impl OwnedTags {
+    /// Creates a set of tags from the parts
     pub fn new<T: AsRef<[U]>, U: AsRef<str>>(parts: &[T]) -> Result<OwnedTags, Error> {
         let size = Tags::output_size_needed(parts);
         let mut buffer = vec![0; size];
@@ -312,6 +328,7 @@ impl OwnedTags {
         Ok(OwnedTags(buffer))
     }
 
+    /// An empty set of tags
     #[inline]
     pub fn empty() -> OwnedTags {
         let mut buffer: Vec<u8> = vec![0; 4];

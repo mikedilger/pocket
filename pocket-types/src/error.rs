@@ -1,8 +1,10 @@
 use std::error::Error as StdError;
 use std::panic::Location;
 
+/// An error, either in pocket-types or with an upstream library
 #[derive(Debug)]
 pub struct Error {
+    /// The error itself
     pub inner: InnerError,
     location: &'static Location<'static>,
 }
@@ -22,23 +24,58 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    /// Event ID does not match event
     BadEventId,
+
+    /// Input is not hexadecimal
     BadHexInput,
+
+    /// Buffer is too small, we require the specified number of bytes
     BufferTooSmall(usize),
+
+    /// Cryptographic error
     Crypto(secp256k1::Error),
+
+    /// The input ended before expected
     EndOfInput,
+
+    /// General error
     General(String),
+
+    /// The nostr Addr is invalid
     InvalidAddr,
+
+    /// The JSON is bad
     JsonBad(&'static str, usize),
+
+    /// The JSON character is bad
     JsonBadCharacter(char, usize, char),
+
+    /// The JSON event is bad
     JsonBadEvent(&'static str, usize),
+
+    /// The JSON filter is bad
     JsonBadFilter(&'static str, usize),
+
+    /// The JSON string is bad
     JsonBadStringChar(u32),
+
+    /// The JSON escape is bad
     JsonEscape,
+
+    /// The JSON escape surrogate is bad
     JsonEscapeSurrogate,
+
+    /// The integer failed to parse
     ParseInt(std::num::ParseIntError),
+
+    /// The string failed to pass UTF-8 checking
     StdUtf8Error(std::str::Utf8Error),
+
+    /// Could not convert from a slice
     TryFromSlice(std::array::TryFromSliceError),
+
+    /// UTF-8 related error
     Utf8Error,
 }
 

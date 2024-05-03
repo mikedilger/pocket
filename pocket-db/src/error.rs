@@ -1,8 +1,10 @@
 use std::error::Error as StdError;
 use std::panic::Location;
 
+/// Errors that can occur in the pocket-db crate
 #[derive(Debug)]
 pub struct Error {
+    /// The error itself
     pub inner: InnerError,
     location: &'static Location<'static>,
 }
@@ -22,16 +24,37 @@ impl std::fmt::Display for Error {
 /// Errors that can occur in the crate
 #[derive(Debug)]
 pub enum InnerError {
+    /// The event has already been deleted
     Deleted,
+
+    /// The event duplicates an event we already have
     Duplicate,
+
+    /// Unexpected end of input
     EndOfInput,
+
+    /// A general error
     General(String),
+
+    /// An error from LMDB, our upstream storage crate
     Lmdb(crate::heed::Error),
+
+    /// The delete is invalid (perhaps the author does not match)
     InvalidDelete,
+
+    /// An upstream I/O error
     Io(std::io::Error),
+
+    /// An error from pocket-types
     PocketTypes(pocket_types::Error),
+
+    /// The event was previously replaced
     Replaced,
+
+    /// The filter represents a scraper, and that was disallowed
     Scraper,
+
+    /// The event kind is wrong
     WrongEventKind,
 }
 

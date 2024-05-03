@@ -6,6 +6,7 @@ use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
 use std::ops::{Bound, Deref};
 use std::path::Path;
 
+/// Statistics about the indexes
 #[derive(Debug, Clone, Copy)]
 pub struct IndexStats {
     /// This is the bytes used on disk (disk file is sparse and may show as much larger)
@@ -92,6 +93,7 @@ impl IndexStats {
     }
 }
 
+/// Indexes
 #[derive(Debug)]
 pub(crate) struct Lmdb {
     env: Env,

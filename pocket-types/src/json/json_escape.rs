@@ -5,10 +5,10 @@ use crate::error::{Error, InnerError};
 // ESCAPES:     \"  \\  \/  /b  /f  /n  /r  /t
 // UTF ESCAPE:  \uXXXX or \uXXXX\uXXXX
 
-// This escapes a string with JSON escapes. It takes an output buffer,
-// and returns it filled with the escaped string.
-// For performance you should try to pass in a buffer that is already
-// allocated big enough.
+/// This escapes a string with JSON escapes. It takes an output buffer,
+/// and returns it filled with the escaped string.
+/// For performance you should try to pass in a buffer that is already
+/// allocated big enough.
 pub fn json_escape(input: &[u8], mut out: Vec<u8>) -> Result<Vec<u8>, Error> {
     let mut read_pos: usize = 0;
     while let Some((codepoint, size)) = next_code_point(&input[read_pos..])? {

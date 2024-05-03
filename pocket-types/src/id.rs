@@ -2,10 +2,12 @@ use crate::error::Error;
 use derive_more::{AsRef, Deref, From, Into};
 use std::fmt;
 
+/// A nostr event id
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, AsRef, Deref, From, Into)]
 pub struct Id([u8; 32]);
 
 impl Id {
+    /// From internal representation bytes
     pub fn from_bytes(bytes: [u8; 32]) -> Id {
         Id(bytes)
     }
@@ -29,6 +31,7 @@ impl Id {
         Ok(Id(out))
     }
 
+    /// As internal representation bytes
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }

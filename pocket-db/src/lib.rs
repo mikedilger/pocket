@@ -2,6 +2,11 @@
 // Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>
 // This file may not be copied, modified, or distributed except according to those terms.
 
+//! Defines a Store type for storing, indexing, and accessing nostr events.
+//! Uses the highly efficient pocket-types; indexes point at offsets into an event map to
+//! avoid additional tree searches during lookups.
+//! Tries to comply with as many nostr NIP requirements as possible at the storage layer.
+
 #![deny(
     missing_debug_implementations,
     trivial_numeric_casts,
@@ -19,6 +24,7 @@
     single_use_lifetimes,
     unreachable_pub,
     missing_copy_implementations,
+    missing_docs
 )]
 
 mod error;
@@ -40,6 +46,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Statistics about the storage
 #[derive(Debug, Clone, Copy)]
 pub struct Stats {
     /// The number of bytes storing the events themselves
@@ -49,6 +56,7 @@ pub struct Stats {
     pub index_stats: IndexStats,
 }
 
+/// A nostr event storage system
 #[derive(Debug)]
 pub struct Store {
     events: EventStore,

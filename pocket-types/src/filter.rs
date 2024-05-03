@@ -32,6 +32,7 @@ const ID_SIZE: usize = 32;
 const PUBKEY_SIZE: usize = 32;
 const KIND_SIZE: usize = 2;
 
+/// A nostr filter
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Filter([u8]);
 
@@ -149,6 +150,7 @@ impl Filter {
         Ok(Self::from_inner(&output[..length]))
     }
 
+    /// The number of bytes needed to represent a filter with the data supplied
     pub fn output_size_needed(
         ids: &[Id],
         authors: &[Pubkey],
@@ -173,6 +175,7 @@ impl Filter {
         ))
     }
 
+    /// Copy the internal reprentation bytes
     pub fn copy(&self, output: &mut [u8]) -> Result<(), Error> {
         if output.len() < self.0.len() {
             return Err(InnerError::EndOfInput.into());
@@ -181,22 +184,26 @@ impl Filter {
         Ok(())
     }
 
+    /// As internal representation bytes
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
-    #[inline]
+    /// The length of the internal representation bytes
     #[allow(clippy::len_without_is_empty)]
+    #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// The number of ids that this filter has
     #[inline]
     pub fn num_ids(&self) -> usize {
         parse_u16!(self.0, NUM_IDS_OFFSET) as usize
     }
 
+    /// the event ids that this filter matches
     #[inline]
     pub fn ids(&self) -> FilterIdIter<'_> {
         FilterIdIter {
@@ -205,6 +212,7 @@ impl Filter {
         }
     }
 
+    /// the number of authors that this filter has
     #[inline]
     pub fn num_authors(&self) -> usize {
         parse_u16!(self.0, NUM_AUTHORS_OFFSET) as usize
@@ -215,6 +223,7 @@ impl Filter {
         ARRAYS_OFFSET + self.num_ids() * ID_SIZE
     }
 
+    /// The authors that this filter matches
     #[inline]
     pub fn authors(&self) -> FilterAuthorIter<'_> {
         FilterAuthorIter {
@@ -224,6 +233,7 @@ impl Filter {
         }
     }
 
+    /// The number of event kinds this filter has
     #[inline]
     pub fn num_kinds(&self) -> usize {
         parse_u16!(self.0, NUM_KINDS_OFFSET) as usize
@@ -234,6 +244,7 @@ impl Filter {
         ARRAYS_OFFSET + self.num_ids() * ID_SIZE + self.num_authors() * PUBKEY_SIZE
     }
 
+    /// The event kinds that this filter matches
     #[inline]
     pub fn kinds(&self) -> FilterKindIter<'_> {
         FilterKindIter {
@@ -251,26 +262,33 @@ impl Filter {
             + self.num_kinds() * KIND_SIZE
     }
 
+    /// The Tags that this filter matches.
+    ///
+    /// Note that only single-letter tags are currently supported.
     #[inline]
     pub fn tags(&self) -> Result<&Tags, Error> {
         unsafe { Tags::delineate(&self.0[self.start_of_tags()..]) }
     }
 
+    /// The maximum number of events this filter will output
     #[inline]
     pub fn limit(&self) -> u32 {
         parse_u32!(self.0, LIMIT_OFFSET)
     }
 
+    /// The time before which events will not match
     #[inline]
     pub fn since(&self) -> Time {
         parse_u64!(self.0, SINCE_OFFSET).into()
     }
 
+    /// The time beyond which events will not match
     #[inline]
     pub fn until(&self) -> Time {
         parse_u64!(self.0, UNTIL_OFFSET).into()
     }
 
+    /// Does the given event match this filter?
     pub fn event_matches(&self, event: &Event) -> Result<bool, Error> {
         // ids
         if self.num_ids() != 0 && !self.ids().any(|id| id == event.id()) {
@@ -326,6 +344,7 @@ impl Filter {
         Ok(true)
     }
 
+    /// Output JSON bytes for this nostr filter
     pub fn as_json(&self) -> Result<Vec<u8>, Error> {
         let mut output: Vec<u8> = Vec::with_capacity(256);
         output.push(b'{');
@@ -530,10 +549,12 @@ impl Iterator for FilterKindIter<'_> {
     }
 }
 
+/// An owned memory-allocated filter
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedFilter(Vec<u8>);
 
 impl OwnedFilter {
+    /// Create a new memory-allocated owned filter
     pub fn new(
         ids: &[Id],
         authors: &[Pubkey],

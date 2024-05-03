@@ -2,6 +2,10 @@
 // Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>
 // This file may not be copied, modified, or distributed except according to those terms.
 
+//! Defines nostr types that are always serialized, including borrowed and owned variants.
+//! These types are highly efficient in situations when they are not mutated.
+//! Defines highly efficient parsing from JSON bytes into these types.
+
 #![deny(
     missing_debug_implementations,
     trivial_numeric_casts,
@@ -19,6 +23,7 @@
     single_use_lifetimes,
     unreachable_pub,
     missing_copy_implementations,
+    missing_docs
 )]
 
 include!("macros.rs");
@@ -38,6 +43,7 @@ pub use filter::{Filter, OwnedFilter};
 mod id;
 pub use id::Id;
 
+/// JSON parsing into these types
 pub mod json;
 
 mod kind;

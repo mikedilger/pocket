@@ -20,6 +20,7 @@ use std::ops::{Deref, DerefMut};
  * 144+T+4+C <--- beginning of region beyond the event
  */
 
+/// A nostr Event
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Event([u8]);
 
@@ -127,11 +128,12 @@ impl Event {
         Ok(Self::from_inner(&output[..length]))
     }
 
+    /// The number of bytes needed to represent an event with such parameters
     pub fn output_size_needed(tagslen: usize, contentlen: usize) -> usize {
         144 + tagslen + 4 + contentlen
     }
 
-    // This copies
+    /// This copies the internal bytes of this event
     pub fn copy(&self, output: &mut [u8]) -> Result<usize, Error> {
         if output.len() < self.0.len() {
             return Err(InnerError::BufferTooSmall(self.0.len()).into());
@@ -140,47 +142,57 @@ impl Event {
         Ok(self.0.len())
     }
 
+    /// The internal bytes representation of this Event
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    /// How many bytes this serialized event consumes
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// The Kind of this event
     pub fn kind(&self) -> Kind {
         parse_u16!(self.0, 4).into()
     }
 
+    /// The created_at Time of this event
     pub fn created_at(&self) -> Time {
         parse_u64!(self.0, 8).into()
     }
 
+    /// The Id of this event
     pub fn id(&self) -> Id {
         let inner: [u8; 32] = self.0[16..16 + 32].try_into().unwrap();
         inner.into()
     }
 
+    /// The Pubkey (author) of this event
     pub fn pubkey(&self) -> Pubkey {
         let inner: [u8; 32] = self.0[48..48 + 32].try_into().unwrap();
         inner.into()
     }
 
+    /// The Sig of this event
     pub fn sig(&self) -> Sig {
         let inner: [u8; 64] = self.0[80..80 + 64].try_into().unwrap();
         inner.into()
     }
 
+    /// The Tags of this event
     pub fn tags(&self) -> Result<&Tags, Error> {
         unsafe { Tags::delineate(&self.0[144..]) }
     }
 
+    /// The content of this event
     pub fn content(&self) -> &[u8] {
         let t = parse_u16!(self.0, 144) as usize;
         let c = parse_u32!(self.0, 144 + t) as usize;
         &self.0[144 + t + 4..144 + t + 4 + c]
     }
 
+    /// Output json bytes for this nostr event
     pub fn as_json(&self) -> Result<Vec<u8>, Error> {
         let mut output: Vec<u8> = Vec::with_capacity(256);
         output.extend(br#"{"id":""#);
@@ -210,6 +222,7 @@ impl Event {
         Ok(output)
     }
 
+    /// Verify the validity of this event
     pub fn verify(&self) -> Result<(), Error> {
         use secp256k1::hashes::{sha256, Hash};
         use secp256k1::schnorr::Signature;
@@ -246,6 +259,7 @@ impl Event {
         Ok(())
     }
 
+    /// Whether the event is expired (NIP-40)
     pub fn is_expired(&self) -> Result<bool, Error> {
         for mut tag in self.tags()?.iter() {
             if tag.next() == Some(b"expiration") {
@@ -288,10 +302,12 @@ impl Ord for Event {
     }
 }
 
+/// A memory-allocated owned event
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedEvent(pub Vec<u8>);
 
 impl OwnedEvent {
+    /// Create a new memory-allocated owned event
     pub fn new(
         id: Id,
         kind: Kind,
