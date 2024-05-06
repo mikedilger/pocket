@@ -215,6 +215,17 @@ impl Lmdb {
         Ok(())
     }
 
+    pub(crate) fn close(self) -> Result<(), Error> {
+        let Lmdb {
+            env, extra_tables, ..
+        } = self;
+        env.force_sync()?;
+        drop(extra_tables);
+        let closing_event = env.prepare_for_closing();
+        closing_event.wait();
+        Ok(())
+    }
+
     /// Get a read transaction
     pub(crate) fn read_txn(&self) -> Result<RoTxn, Error> {
         Ok(self.env.read_txn()?)

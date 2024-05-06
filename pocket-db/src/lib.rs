@@ -130,11 +130,8 @@ impl Store {
         } = self;
 
         indexes.sync()?;
+        indexes.close()?; // drops them.
         drop(events);
-        drop(indexes);
-
-        println!("{}", dir.display());
-        let dir = dir.clone();
 
         let mut events_path = dir.clone();
         events_path.push("event.map");
@@ -150,8 +147,10 @@ impl Store {
 
         // Backup existing data (moving out of the way)
         fs::rename(&events_path, &events_bak_path)?;
-
         fs::rename(&indexes_path, &indexes_bak_path)?;
+
+        // Create space for new data
+        let _ = std::fs::create_dir(&indexes_path);
 
         // Open old data
         let old_events = EventStore::new(&events_bak_path)?;
@@ -159,8 +158,8 @@ impl Store {
 
         // Open new data
         let new_events = EventStore::new(&events_path)?;
-        let _ = std::fs::create_dir(&indexes_path);
         let new_indexes = Lmdb::new(&indexes_path, &extra_table_names)?;
+        new_indexes.sync()?; // force it to sync
 
         let old_store = Store {
             indexes: old_indexes,
@@ -177,10 +176,10 @@ impl Store {
         };
 
         let old_txn = old_store.indexes.read_txn()?;
-        let mut new_txn = new_store.indexes.write_txn()?;
 
         // Iterate through all IDs and copy and index all of those events
         // This populates all the indexes
+        let mut new_txn = new_store.indexes.write_txn()?;
         for i in old_store.indexes.i_iter(&old_txn)? {
             let (_key, val) = i?;
             //let id = Id(key[0..32].try_into().unwrap());
@@ -189,25 +188,39 @@ impl Store {
             let new_offset = new_store.events.store_event(event)? as u64;
             new_store.indexes.index(&mut new_txn, event, new_offset)?;
         }
+        new_txn.commit()?;
 
         // Copy deleted IDs
+        let mut new_txn = new_store.indexes.write_txn()?;
         let mut deleted = old_store.indexes.dump_deleted()?;
         for id in deleted.drain(..) {
             new_store.indexes.mark_deleted(&mut new_txn, id)?;
         }
+        new_txn.commit()?;
 
+        // Copy deleted naddrs
+        let mut new_txn = new_store.indexes.write_txn()?;
         let mut naddr_deleted = old_store.indexes.dump_naddr_deleted()?;
         for (addr, when) in naddr_deleted.drain(..) {
             new_store
                 .indexes
                 .mark_naddr_deleted(&mut new_txn, &addr, when)?;
         }
-
-        // FIXME GINA copy the extra tables
-
         new_txn.commit()?;
 
-        new_store.indexes.sync()?;
+        // Copy extra tables
+        let mut new_txn = new_store.indexes.write_txn()?;
+        for table_name in old_store.extra_table_names.iter() {
+            let old_table = old_store.extra_table(table_name).unwrap();
+            let new_table = new_store.extra_table(table_name).unwrap();
+            for entry in old_table.iter(&old_txn)? {
+                let (key, value) = entry?;
+                new_table.put(&mut new_txn, key, value)?;
+            }
+        }
+        new_txn.commit()?;
+
+        new_store.sync()?;
 
         Ok(new_store)
     }
