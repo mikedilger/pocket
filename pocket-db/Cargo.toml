@@ -8,7 +8,7 @@ repository = "https://github.com/mikedilger/pocket"
 edition = "2021"
 
 [dependencies]
-heed = { git = "https://github.com/meilisearch/heed", rev = "036ac23f73a021894974b9adc815bc95b3e0482a" }
+heed = "0.20"
 mmap-append = "0.2"
 pocket-types = { path = "../pocket-types" }
 
