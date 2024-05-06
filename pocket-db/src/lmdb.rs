@@ -3,6 +3,7 @@ use crate::heed::byteorder::BigEndian;
 use crate::heed::types::{Bytes, Unit, U64};
 use crate::heed::{Database, Env, EnvFlags, EnvOpenOptions, RoIter, RoRange, RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
+use std::collections::HashMap;
 use std::ops::{Bound, Deref};
 use std::path::Path;
 
@@ -107,20 +108,20 @@ pub(crate) struct Lmdb {
     ktc_index: Database<Bytes, U64<BigEndian>>,
     deleted_ids: Database<Bytes, Unit>,
     deleted_naddrs: Database<Bytes, U64<BigEndian>>, // value is Time
-    extra_tables: Vec<Database<Bytes, Bytes>>,
+    extra_tables: HashMap<&'static str, Database<Bytes, Bytes>>,
 }
 
 impl Lmdb {
     pub(crate) fn new<P: AsRef<Path>>(
         directory: P,
-        num_extra_tables: usize,
+        extra_table_names: &[&'static str],
     ) -> Result<Lmdb, Error> {
         let mut builder = EnvOpenOptions::new();
         unsafe {
             let _ = builder.flags(EnvFlags::NO_TLS);
         }
         let _ = builder
-            .max_dbs(10 + num_extra_tables as u32)
+            .max_dbs(10 + extra_table_names.len() as u32)
             .map_size(1048576 * 1024 * 24); // 24 GB
 
         let env = unsafe { builder.open(directory)? };
@@ -177,14 +178,14 @@ impl Lmdb {
             .name("deleted-naddrs")
             .create(&mut txn)?;
 
-        let mut extra_tables = Vec::with_capacity(num_extra_tables);
-        for i in 0..num_extra_tables {
-            extra_tables.push(
-                env.database_options()
-                    .types::<Bytes, Bytes>()
-                    .name(&format!("extra{}", i))
-                    .create(&mut txn)?,
-            );
+        let mut extra_tables = HashMap::with_capacity(extra_table_names.len());
+        for extra_table_name in extra_table_names.iter() {
+            let table = env
+                .database_options()
+                .types::<Bytes, Bytes>()
+                .name(extra_table_name)
+                .create(&mut txn)?;
+            let _ = extra_tables.insert(*extra_table_name, table);
         }
 
         txn.commit()?;
@@ -454,12 +455,8 @@ impl Lmdb {
     }
 
     /// Get access to an extra table
-    pub(crate) fn extra_table(&self, index: usize) -> Option<Database<Bytes, Bytes>> {
-        if index < self.extra_tables.len() {
-            Some(self.extra_tables[index])
-        } else {
-            None
-        }
+    pub(crate) fn extra_table(&self, name: &'static str) -> Option<Database<Bytes, Bytes>> {
+        self.extra_tables.get(name).copied()
     }
 
     pub(crate) fn i_iter<'a>(
