@@ -47,7 +47,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Statistics about the storage
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Stats {
     /// The number of bytes storing the events themselves
     pub event_bytes: usize,
