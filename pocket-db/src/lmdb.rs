@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::heed::byteorder::BigEndian;
+use crate::heed::byteorder::NativeEndian;
 use crate::heed::types::{Bytes, Unit, U64};
 use crate::heed::{Database, Env, EnvFlags, EnvOpenOptions, RoIter, RoRange, RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Id, Kind, Pubkey, Time};
@@ -99,15 +99,15 @@ impl IndexStats {
 pub(crate) struct Lmdb {
     env: Env,
     general: Database<Bytes, Bytes>,
-    i_index: Database<Bytes, U64<BigEndian>>,
-    ci_index: Database<Bytes, U64<BigEndian>>,
-    tc_index: Database<Bytes, U64<BigEndian>>,
-    ac_index: Database<Bytes, U64<BigEndian>>,
-    akc_index: Database<Bytes, U64<BigEndian>>,
-    atc_index: Database<Bytes, U64<BigEndian>>,
-    ktc_index: Database<Bytes, U64<BigEndian>>,
+    i_index: Database<Bytes, U64<NativeEndian>>,
+    ci_index: Database<Bytes, U64<NativeEndian>>,
+    tc_index: Database<Bytes, U64<NativeEndian>>,
+    ac_index: Database<Bytes, U64<NativeEndian>>,
+    akc_index: Database<Bytes, U64<NativeEndian>>,
+    atc_index: Database<Bytes, U64<NativeEndian>>,
+    ktc_index: Database<Bytes, U64<NativeEndian>>,
     deleted_ids: Database<Bytes, Unit>,
-    deleted_naddrs: Database<Bytes, U64<BigEndian>>, // value is Time
+    deleted_naddrs: Database<Bytes, U64<NativeEndian>>, // value is Time
     extra_tables: HashMap<&'static str, Database<Bytes, Bytes>>,
 }
 
@@ -134,37 +134,37 @@ impl Lmdb {
             .create(&mut txn)?;
         let i_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("ids")
             .create(&mut txn)?;
         let ci_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("ci")
             .create(&mut txn)?;
         let tc_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("tci")
             .create(&mut txn)?;
         let ac_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("aci")
             .create(&mut txn)?;
         let akc_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("akci")
             .create(&mut txn)?;
         let atc_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("atci")
             .create(&mut txn)?;
         let ktc_index = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("ktci")
             .create(&mut txn)?;
         let deleted_ids = env
@@ -174,7 +174,7 @@ impl Lmdb {
             .create(&mut txn)?;
         let deleted_naddrs = env
             .database_options()
-            .types::<Bytes, U64<BigEndian>>()
+            .types::<Bytes, U64<NativeEndian>>()
             .name("deleted-naddrs")
             .create(&mut txn)?;
 
@@ -462,7 +462,7 @@ impl Lmdb {
     pub(crate) fn i_iter<'a>(
         &'a self,
         txn: &'a RoTxn,
-    ) -> Result<RoIter<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoIter<'_, Bytes, U64<NativeEndian>>, Error> {
         Ok(self.i_index.iter(txn)?)
     }
 
@@ -471,7 +471,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ci_index(until, [0; 32].into());
         let end_prefix = Self::key_ci_index(since, [255; 32].into());
         let range = (
@@ -488,7 +488,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_tc_index(
             tagbyte,
             tagvalue,
@@ -509,7 +509,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ac_index(author, until, [0; 32].into());
         let end_prefix = Self::key_ac_index(author, since, [255; 32].into());
         let range = (
@@ -526,7 +526,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_akc_index(author, kind, until, [0; 32].into());
         let end_prefix = Self::key_akc_index(author, kind, since, [255; 32].into());
         let range = (
@@ -544,7 +544,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_atc_index(
             author,
             tagbyte,
@@ -568,7 +568,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<BigEndian>>, Error> {
+    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ktc_index(
             kind,
             tagbyte,
