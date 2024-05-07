@@ -44,6 +44,7 @@ use crate::heed::{Database, RoTxn, RwTxn};
 use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 /// Statistics about the storage
@@ -145,6 +146,18 @@ impl Store {
         let mut indexes_bak_path = dir.clone();
         indexes_bak_path.push("lmdb.bak");
 
+        // Check if this process and the files have different owners
+        let process_uid = unsafe { libc::geteuid() };
+        let file_uid = std::fs::metadata(&events_path)?.uid();
+        let mut need_chown = false;
+        if process_uid != file_uid {
+            if process_uid != 0 {
+                return Err(InnerError::Ownership.into());
+            } else {
+                need_chown = true;
+            }
+        }
+
         // Backup existing data (moving out of the way)
         fs::rename(&events_path, &events_bak_path)?;
         fs::rename(&indexes_path, &indexes_bak_path)?;
@@ -221,6 +234,32 @@ impl Store {
         new_txn.commit()?;
 
         new_store.sync()?;
+
+        if need_chown {
+            std::os::unix::fs::chown(&events_path, Some(file_uid), None)?;
+
+            std::os::unix::fs::chown(&events_bak_path, Some(file_uid), None)?;
+
+            std::os::unix::fs::chown(&indexes_path, Some(file_uid), None)?;
+            {
+                let mut data = indexes_path.clone();
+                data.push("data.mdb");
+                std::os::unix::fs::chown(&data, Some(file_uid), None)?;
+                let mut lock = indexes_path.clone();
+                lock.push("lock.mdb");
+                std::os::unix::fs::chown(&lock, Some(file_uid), None)?;
+            }
+
+            std::os::unix::fs::chown(&indexes_bak_path, Some(file_uid), None)?;
+            {
+                let mut data = indexes_bak_path.clone();
+                data.push("data.mdb");
+                std::os::unix::fs::chown(&data, Some(file_uid), None)?;
+                let mut lock = indexes_bak_path.clone();
+                lock.push("lock.mdb");
+                std::os::unix::fs::chown(&lock, Some(file_uid), None)?;
+            }
+        }
 
         Ok(new_store)
     }

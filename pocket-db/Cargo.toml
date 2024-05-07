@@ -9,6 +9,7 @@ edition = "2021"
 
 [dependencies]
 heed = "0.20"
+libc = "0.2"
 mmap-append = "0.2"
 pocket-types = { path = "../pocket-types" }
 
