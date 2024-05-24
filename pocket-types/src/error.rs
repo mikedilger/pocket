@@ -140,7 +140,7 @@ impl Into<Error> for InnerError {
     fn into(self) -> Error {
         Error {
             inner: self,
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -150,7 +150,7 @@ impl From<std::array::TryFromSliceError> for Error {
     fn from(err: std::array::TryFromSliceError) -> Self {
         Error {
             inner: InnerError::TryFromSlice(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -160,7 +160,7 @@ impl From<secp256k1::Error> for Error {
     fn from(err: secp256k1::Error) -> Self {
         Error {
             inner: InnerError::Crypto(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -170,7 +170,7 @@ impl From<std::num::ParseIntError> for Error {
     fn from(err: std::num::ParseIntError) -> Self {
         Error {
             inner: InnerError::ParseInt(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -180,7 +180,7 @@ impl From<std::str::Utf8Error> for Error {
     fn from(err: std::str::Utf8Error) -> Self {
         Error {
             inner: InnerError::StdUtf8Error(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }

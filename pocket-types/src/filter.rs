@@ -884,7 +884,7 @@ fn parse_json_filter(input: &[u8], output: &mut [u8]) -> Result<(usize, usize), 
             end += 2;
             put(output, end, 1_u16.to_ne_bytes().as_slice())?;
             if output.len() < end + 2 {
-                return Err(crate::error::InnerError::BufferTooSmall(end + 2).into());
+                return Err(InnerError::BufferTooSmall(end + 2).into());
             }
             output[end + 2] = letter;
 

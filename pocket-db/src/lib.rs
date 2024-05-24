@@ -81,7 +81,7 @@ impl Store {
         let dir = directory.as_ref().to_owned();
 
         // Create the directory if it doesn't exist, ignoring errors
-        let _ = std::fs::create_dir(&dir);
+        let _ = fs::create_dir(&dir);
 
         let mut events_path = dir.clone();
         events_path.push("event.map");
@@ -90,7 +90,7 @@ impl Store {
         indexes_path.push("lmdb");
 
         // Create the lmdb subdir if it doesn't exist, ignoring errors
-        let _ = std::fs::create_dir(&indexes_path);
+        let _ = fs::create_dir(&indexes_path);
 
         let events = EventStore::new(&events_path)?;
         let indexes = Lmdb::new(&indexes_path, &extra_table_names)?;
@@ -148,7 +148,7 @@ impl Store {
 
         // Check if this process and the files have different owners
         let process_uid = unsafe { libc::geteuid() };
-        let file_uid = std::fs::metadata(&events_path)?.uid();
+        let file_uid = fs::metadata(&events_path)?.uid();
         let mut need_chown = false;
         if process_uid != file_uid {
             if process_uid != 0 {
@@ -163,7 +163,7 @@ impl Store {
         fs::rename(&indexes_path, &indexes_bak_path)?;
 
         // Create space for new data
-        let _ = std::fs::create_dir(&indexes_path);
+        let _ = fs::create_dir(&indexes_path);
 
         // Open old data
         let old_events = EventStore::new(&events_bak_path)?;

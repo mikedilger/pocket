@@ -37,7 +37,7 @@ pub enum InnerError {
     General(String),
 
     /// An error from LMDB, our upstream storage crate
-    Lmdb(crate::heed::Error),
+    Lmdb(heed::Error),
 
     /// The delete is invalid (perhaps the author does not match)
     InvalidDelete,
@@ -103,7 +103,7 @@ impl Into<Error> for InnerError {
     fn into(self) -> Error {
         Error {
             inner: self,
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -113,7 +113,7 @@ impl From<pocket_types::Error> for Error {
     fn from(err: pocket_types::Error) -> Self {
         Error {
             inner: InnerError::PocketTypes(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
@@ -123,17 +123,17 @@ impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Error {
             inner: InnerError::Io(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
 
-impl From<crate::heed::Error> for Error {
+impl From<heed::Error> for Error {
     #[track_caller]
-    fn from(err: crate::heed::Error) -> Self {
+    fn from(err: heed::Error) -> Self {
         Error {
             inner: InnerError::Lmdb(err),
-            location: std::panic::Location::caller(),
+            location: Location::caller(),
         }
     }
 }
