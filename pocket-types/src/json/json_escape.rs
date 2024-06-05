@@ -110,11 +110,17 @@ pub fn json_unescape(input: &[u8], out: &mut [u8]) -> Result<(usize, usize), Err
                 _ => return Err(InnerError::JsonEscape.into()), // nothing else is a legal escape
             }
         } else if let Some((digit, total)) = uescape {
-            // must be a digit
-            if !(48..=57).contains(&codepoint) {
+            let digit_value = if (48..=57).contains(&codepoint) {
+                codepoint - 48
+            } else if (65..=70).contains(&codepoint) {
+                codepoint - 65 + 10
+            } else if (97..=102).contains(&codepoint) {
+                codepoint - 97 + 10
+            } else {
                 return Err(InnerError::JsonEscape.into());
-            }
-            let total = total + ((codepoint - 48) << (4 * (3 - digit)));
+            };
+
+            let total = total + (digit_value << (4 * (3 - digit)));
             if digit >= 3 {
                 if (0xD800..=0xDFFF).contains(&total) {
                     return Err(InnerError::JsonEscapeSurrogate.into());
@@ -241,8 +247,11 @@ mod test {
             "{\"name\":\"BagMan\",\"about\":\"Father.\nHusband.\nNerd: †.\"}".as_bytes(),
         );
 
+        // allowed unicode escape
+        is_ok(r#"\u000b"#.as_bytes(), b"\x0B");
+
         // bad unicode escape
-        is_err(r#"\u8f00"#.as_bytes());
+        is_err(r#"\u8g00"#.as_bytes());
 
         // Check output values
         let mut buffer: Vec<u8> = Vec::with_capacity(1024);
