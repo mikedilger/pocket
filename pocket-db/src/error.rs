@@ -69,7 +69,9 @@ impl std::fmt::Display for InnerError {
             InnerError::EndOfInput => write!(f, "End of input"),
             InnerError::General(s) => write!(f, "{s}"),
             InnerError::Io(e) => write!(f, "I/O: {e}"),
-            InnerError::Ownership => write!(f, "Files owned by a different user and we are not root"),
+            InnerError::Ownership => {
+                write!(f, "Files owned by a different user and we are not root")
+            }
             InnerError::Lmdb(e) => write!(f, "LMDB: {e}"),
             InnerError::InvalidDelete => write!(f, "Invalid delete event"),
             InnerError::PocketTypes(e) => write!(f, "types: {e}"),
