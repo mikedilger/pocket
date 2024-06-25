@@ -60,3 +60,5 @@ pub use tags::{OwnedTags, Tags, TagsIter, TagsStringIter};
 
 mod time;
 pub use time::Time;
+
+pub use secp256k1;

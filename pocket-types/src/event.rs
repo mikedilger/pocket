@@ -331,6 +331,41 @@ impl OwnedEvent {
         )?;
         Ok(OwnedEvent(buffer))
     }
+
+    /// Create a new memory-allocated owned event with a private key
+    pub fn sign_new(
+        keypair: &secp256k1::Keypair,
+        kind: Kind,
+        tags: &Tags,
+        created_at: Time,
+        content: &[u8],
+    ) -> Result<OwnedEvent, Error> {
+        use secp256k1::hashes::{sha256, Hash};
+        use secp256k1::Message;
+
+        let (xonlypubkey, _parity) = keypair.x_only_public_key();
+        let pubkey = Pubkey::from_bytes(xonlypubkey.serialize());
+
+        let escaped_content = Vec::with_capacity(content.len() * 7 / 6);
+        let escaped_content = json_escape(content, escaped_content)?;
+        let signable = format!(
+            r#"[0,"{}",{},{},{},"{}"]"#,
+            pubkey,
+            created_at,
+            kind,
+            tags,
+            unsafe { std::str::from_utf8_unchecked(&escaped_content[..]) },
+        );
+        drop(escaped_content);
+
+        let hash = sha256::Hash::hash(signable.as_bytes());
+        let hashref = <sha256::Hash as AsRef<[u8; 32]>>::as_ref(&hash);
+        let id = Id::from_bytes((*hashref).into());
+        let message = Message::from_digest_slice(hashref)?;
+        let signature = keypair.sign_schnorr(message);
+        let sig = Sig::from_bytes(signature.serialize());
+        Self::new(id, kind, pubkey, sig, tags, created_at, content)
+    }
 }
 
 impl Deref for OwnedEvent {
@@ -703,5 +738,22 @@ mod test {
         let (_insize, event) = Event::from_json(&json2[..], &mut buffer2).unwrap();
         assert_eq!(event.len(), 372);
         assert_eq!(&buffer[..372], &buffer2[..372]);
+    }
+
+    #[test]
+    fn test_sign_new() {
+        use crate::{Kind, OwnedEvent, OwnedTags, Time};
+        use secp256k1::Keypair;
+
+        let keypair = Keypair::new_global(&mut rand::thread_rng());
+        let event = OwnedEvent::sign_new(
+            &keypair,
+            Kind::from_u16(1),
+            &OwnedTags::empty(),
+            Time::now(),
+            b"This is a test",
+        )
+        .unwrap();
+        event.verify().unwrap();
     }
 }

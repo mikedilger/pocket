@@ -12,6 +12,11 @@ impl Kind {
         self.0
     }
 
+    /// Create a Kind from a u16
+    pub fn from_u16(u: u16) -> Kind {
+        Kind(u)
+    }
+
     /// Try to parse from a string representation
     pub fn try_from_string_bytes(str_bytes: &str) -> Result<Kind, Error> {
         let u = str_bytes.parse::<u16>()?;
