@@ -1,4 +1,5 @@
 use crate::error::{Error, InnerError};
+use crate::json::json_escape;
 use crate::json::json_parse::read_tags_array;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -227,6 +228,7 @@ impl Tags {
 
     /// Generates JSON representing the tags
     pub fn as_json(&self) -> Vec<u8> {
+        let mut escbuffer: Vec<u8> = Vec::with_capacity(256);
         let mut output: Vec<u8> = Vec::with_capacity(256);
         let mut first = true;
         output.push(b'[');
@@ -241,7 +243,9 @@ impl Tags {
                     output.push(b',');
                 }
                 output.push(b'"');
-                output.extend(bytes);
+                escbuffer = json_escape(bytes, escbuffer).unwrap();
+                output.extend(&escbuffer);
+                escbuffer.clear();
                 output.push(b'"');
                 firststring = false;
             }
