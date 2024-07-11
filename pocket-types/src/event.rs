@@ -756,4 +756,18 @@ mod test {
         .unwrap();
         event.verify().unwrap();
     }
+
+    #[test]
+    fn test_event_with_quote() {
+        let json = br#"{"kind":1,"id":"ff54625d37b2baf712e35ce84470fd1330420f0e6580f4d53eb7d9d0cb4f5fa0","pubkey":"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","created_at":1720663889,"tags":[["t","\""]],"content":"hello from the nostr army knife","sig":"bf7110567b15b4c7231f4c63776bb7a5f382f2f7b1cc8b639fc0cbb7f5ff7b466a73f8ab23974d2c3597861ba70fbecf9f646c2fcfe3859d83a73e73c93db5f9"}"#;
+        let mut buffer: Vec<u8> = Vec::with_capacity(4096);
+        buffer.resize(4096, 0);
+        let (_insize, event) = Event::from_json(&json[..], &mut buffer).unwrap();
+
+        let tags = event.tags().unwrap();
+        let tags_json_binary = tags.as_json();
+        let s = unsafe { std::str::from_utf8_unchecked(&tags_json_binary) };
+        println!("{}", s);
+        event.verify().unwrap();
+    }
 }
