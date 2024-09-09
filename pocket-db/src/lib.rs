@@ -361,7 +361,7 @@ impl Store {
                     };
 
                     // Pre-remove any parameterized-replaceable events that this replaces
-                    self.remove_parameterized_replaceable(&mut txn, &addr, Time::max())?;
+                    self.remove_parameterized_replaceable(&mut txn, &addr, event.created_at())?;
 
                     // If any remaining matching parameterized replaceable events exist, then
                     // this event is invalid, return Replaced
