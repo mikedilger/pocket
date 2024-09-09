@@ -12,7 +12,6 @@
     trivial_numeric_casts,
     clippy::string_slice,
     unused_import_braces,
-    unused_qualifications,
     unused_results,
     unused_lifetimes,
     unused_labels,
@@ -26,6 +25,9 @@
     missing_copy_implementations,
     missing_docs
 )]
+// temporary we have removed 'unused_qualifications' from the above list since size_of has become
+// an intrinsic and the compiler thinks we don't need to reference std::mem anymore, but we
+// do because that intrinsic is unstable.
 
 mod error;
 pub use error::{Error, InnerError};
