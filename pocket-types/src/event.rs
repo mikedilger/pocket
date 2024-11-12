@@ -360,7 +360,7 @@ impl OwnedEvent {
 
         let hash = sha256::Hash::hash(signable.as_bytes());
         let hashref = <sha256::Hash as AsRef<[u8; 32]>>::as_ref(&hash);
-        let id = Id::from_bytes((*hashref).into());
+        let id = Id::from_bytes(*hashref);
         let message = Message::from_digest_slice(hashref)?;
         let signature = keypair.sign_schnorr(message);
         let sig = Sig::from_bytes(signature.serialize());

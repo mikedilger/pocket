@@ -21,7 +21,7 @@ macro_rules! write_hex {
     ($input:expr, $output:expr, $bytelen:expr) => {{
         assert_eq!($input.len(), $bytelen);
         if $output.len() != $bytelen * 2 {
-            Err($crate::error::InnerError::BufferTooSmall($bytelen * 2).into())
+            Err(Into::<Error>::into($crate::error::InnerError::BufferTooSmall($bytelen * 2)))
         } else {
             for (i, byte) in $input.iter().enumerate() {
                 $output[i * 2] = $crate::HEX_CHARS[((byte & 0xF0) >> 4) as usize];

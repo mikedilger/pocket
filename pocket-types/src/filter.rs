@@ -455,6 +455,55 @@ impl Filter {
 
         Ok(output)
     }
+
+    /// The offset used for NIP-45 (pr #1561)
+    pub fn hyperloglog_offset(&self) -> Result<Option<usize>, Error> {
+        let tags = self.tags()?;
+
+        // Restrictions on what kinds of filters get Hll counts
+        if self.num_ids() != 0
+            || self.num_authors() != 0
+            || self.num_kinds() != 1
+            || self.limit() != u32::MAX
+            || self.since() != Time::min()
+            || self.until() != Time::max()
+            || tags.count() != 1
+        {
+            return Ok(None);
+        }
+
+        if self.kinds().next() == Some(Kind::from_u16(3)) {
+            // {"#p": ["<pubkey>"], "kinds": [3]}
+            if tags.get_string(0, 0) != Some(b"p") {
+                return Ok(None);
+            }
+        } else if self.kinds().next() == Some(Kind::from_u16(7)) {
+            // {"#e": ["<id>"], "kinds": [7]}
+            if tags.get_string(0, 0) != Some(b"e") {
+                return Ok(None);
+            }
+        } else {
+            return Ok(None);
+        };
+
+        let hex = match tags.get_string(0, 1) {
+            Some(h) => h,
+            None => {
+                return Ok(None); // actually an error
+            }
+        };
+
+        if hex.len() != 64 {
+            return Ok(None); // actually an error
+        }
+
+        let base_offset = crate::HEX_INVERSE[hex[32] as usize];
+        if base_offset == 255 {
+            return Ok(None); // actually an error
+        }
+
+        Ok(Some(base_offset as usize + 8))
+    }
 }
 
 impl fmt::Display for Filter {
@@ -1226,5 +1275,33 @@ mod test {
         );
         assert_eq!(tag2_iter.next(), None);
         assert!(tag_iter.next().is_none());
+    }
+
+    #[test]
+    fn test_filter_hyperloglog_offset() {
+        let mut buffer: Vec<u8> = Vec::with_capacity(4096);
+        buffer.resize(4096, 0);
+
+        /*
+        // Not a filter we can HLL count
+        let json = br##"{"kinds": [3], "#a": ["30023:a9663055164ab8b30d9524656370c4bf93393bb051b7edf4556f40c5298dc0c7:sandwiches","30023:a9663055164ab8b30d9524656370c4bf93393bb051b7edf4556f40c5298dc0c7:drinks"]}]"##;
+        let _ = parse_json_filter(&json[..], &mut buffer).unwrap();
+        let filter = unsafe { Filter::delineate(&buffer).unwrap() };
+        assert_eq!(filter.hyperloglog_offset().unwrap(), None);
+         */
+
+        // Test count followers
+        let json = br##"{"kinds": [3], "#p": ["a9663055164ab8b30d9524656370c4bf93393bb051b7edf4556f40c5298dc0c7"]}]"##;
+        //                                     012345678901234567890123456789012 (gives us 9 + 8 = 17)
+        let _ = parse_json_filter(&json[..], &mut buffer).unwrap();
+        let filter = unsafe { Filter::delineate(&buffer).unwrap() };
+        assert_eq!(filter.hyperloglog_offset().unwrap(), Some(17));
+
+        // Test count reactions
+        let json = br##"{"kinds": [7], "#e": ["a9663055164ab8b30d9524656371c4bf63393bb051b7edf4556f40c5298dc0c7"]}]"##;
+        //                                     012345678901234567890123456789012 (gives us 6 + 8 = 14)
+        let _ = parse_json_filter(&json[..], &mut buffer).unwrap();
+        let filter = unsafe { Filter::delineate(&buffer).unwrap() };
+        assert_eq!(filter.hyperloglog_offset().unwrap(), Some(14));
     }
 }

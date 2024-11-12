@@ -40,6 +40,9 @@ pub use event::{Event, OwnedEvent};
 mod filter;
 pub use filter::{Filter, OwnedFilter};
 
+mod hll8;
+pub use hll8::Hll8;
+
 mod id;
 pub use id::Id;
 

@@ -66,6 +66,9 @@ pub enum InnerError {
     /// The JSON escape surrogate is bad
     JsonEscapeSurrogate,
 
+    /// Out of range
+    OutOfRange(usize),
+
     /// The integer failed to parse
     ParseInt(std::num::ParseIntError),
 
@@ -110,6 +113,7 @@ impl std::fmt::Display for InnerError {
                 f,
                 "JSON string escape surrogate (ancient style) is not supported"
             ),
+            InnerError::OutOfRange(u) => write!(f, "Out of range: {u}"),
             InnerError::ParseInt(e) => write!(f, "parse int error: {e}"),
             InnerError::StdUtf8Error(e) => write!(f, "UTF-8 error: {e}"),
             InnerError::TryFromSlice(e) => write!(f, "slice error: {e}"),
