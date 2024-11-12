@@ -31,9 +31,14 @@ impl Pubkey {
         Ok(Pubkey(out))
     }
 
-    /// As internal representation bytes
+    /// As internal representation bytes slice
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
+    }
+
+    /// As internal representation bytes array
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
     }
 }
 
