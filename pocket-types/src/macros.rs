@@ -1,6 +1,8 @@
 static HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
+
+/// Map hex char to u8 value. Returns 255 if not a hex char
 #[allow(clippy::zero_prefixed_literal)]
-static HEX_INVERSE: [u8; 128] = {
+pub static HEX_INVERSE: [u8; 128] = {
     const __: u8 = 255;
     [
         //   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
