@@ -396,7 +396,7 @@ impl Lmdb {
     pub(crate) fn i_iter<'a>(
         &'a self,
         txn: &'a RoTxn,
-    ) -> Result<RoIter<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoIter<'a, Bytes, U64<NativeEndian>>, Error> {
         Ok(self.i_index.iter(txn)?)
     }
 
@@ -405,7 +405,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ci_index(until, [0; 32].into());
         let end_prefix = Self::key_ci_index(since, [255; 32].into());
         let range = (
@@ -422,7 +422,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_tc_index(
             tagbyte,
             tagvalue,
@@ -443,7 +443,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ac_index(author, until, [0; 32].into());
         let end_prefix = Self::key_ac_index(author, since, [255; 32].into());
         let range = (
@@ -460,7 +460,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_akc_index(author, kind, until, [0; 32].into());
         let end_prefix = Self::key_akc_index(author, kind, since, [255; 32].into());
         let range = (
@@ -478,7 +478,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_atc_index(
             author,
             tagbyte,
@@ -502,7 +502,7 @@ impl Lmdb {
         since: Time,
         until: Time,
         txn: &'a RoTxn,
-    ) -> Result<RoRange<'_, Bytes, U64<NativeEndian>>, Error> {
+    ) -> Result<RoRange<'a, Bytes, U64<NativeEndian>>, Error> {
         let start_prefix = Self::key_ktc_index(
             kind,
             tagbyte,
