@@ -34,7 +34,7 @@ impl Lmdb {
     ) -> Result<Lmdb, Error> {
         let mut builder = EnvOpenOptions::new();
         unsafe {
-            let _ = builder.flags(EnvFlags::NO_TLS);
+            let _ = builder.flags(EnvFlags::NO_TLS | EnvFlags::NO_SYNC | EnvFlags::NO_META_SYNC);
         }
         let _ = builder
             .max_dbs(10 + extra_table_names.len() as u32)
