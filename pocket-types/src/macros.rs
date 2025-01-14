@@ -1,4 +1,4 @@
-static HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
+pub static HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
 
 /// Map hex char to u8 value. Returns 255 if not a hex char
 #[allow(clippy::zero_prefixed_literal)]
@@ -17,11 +17,13 @@ pub static HEX_INVERSE: [u8; 128] = {
     ]
 };
 
+/// Write hex characters to `$output` over `$bytelen` bytes of `$input`
+#[macro_export]
 macro_rules! write_hex {
     ($input:expr, $output:expr, $bytelen:expr) => {{
         assert_eq!($input.len(), $bytelen);
         if $output.len() != $bytelen * 2 {
-            Err(Into::<Error>::into($crate::error::InnerError::BufferTooSmall($bytelen * 2)))
+            Err(Into::<$crate::Error>::into($crate::InnerError::BufferTooSmall($bytelen * 2)))
         } else {
             for (i, byte) in $input.iter().enumerate() {
                 $output[i * 2] = $crate::HEX_CHARS[((byte & 0xF0) >> 4) as usize];
@@ -32,21 +34,23 @@ macro_rules! write_hex {
     }};
 }
 
+/// Read hex characters from `$input` to bytes in `$output` for `$bytelen` bytes
+#[macro_export]
 macro_rules! read_hex {
     ($input:expr, $output:expr, $bytelen:expr) => {{
         assert_eq!($output.len(), $bytelen);
         if $input.len() != $bytelen * 2 {
-            Err(Into::<$crate::error::Error>::into($crate::error::InnerError::EndOfInput))
+            Err(Into::<$crate::Error>::into($crate::InnerError::EndOfInput))
         } else {
             let mut i = 0;
             loop {
                 let high = $crate::HEX_INVERSE[$input[i * 2] as usize];
                 if high == 255 {
-                    break Err($crate::error::InnerError::BadHexInput.into());
+                    break Err($crate::InnerError::BadHexInput.into());
                 }
                 let low = $crate::HEX_INVERSE[$input[i * 2 + 1] as usize];
                 if low == 255 {
-                    break Err($crate::error::InnerError::BadHexInput.into());
+                    break Err($crate::InnerError::BadHexInput.into());
                 }
                 $output[i] = high * 16 + low;
                 i += 1;
