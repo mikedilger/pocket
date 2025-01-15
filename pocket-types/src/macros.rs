@@ -1,3 +1,4 @@
+/// The 16 hex characters
 pub static HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
 
 /// Map hex char to u8 value. Returns 255 if not a hex char

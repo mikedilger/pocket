@@ -4,7 +4,7 @@ use std::ops::AddAssign;
 /// HyperLogLog approximate counting mechanism
 ///
 /// This uses a fixed set of 256 buckets (k=8, M=256), each holding a count up to 255.
-/// https://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
+/// <https://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf>
 ///
 /// This is used for NIP-45 PR #1561
 #[derive(Debug, Clone, Copy)]
