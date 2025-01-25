@@ -43,7 +43,7 @@ pub use heed;
 
 use crate::heed::types::Bytes;
 use crate::heed::{Database, RoTxn, RwTxn};
-use pocket_types::{Addr, Event, Filter, Id, Kind, Pubkey, Time};
+use pocket_types::{Addr, Event, Filter, Id, Kind, OwnedFilter, OwnedTags, Pubkey, Time};
 use std::collections::BTreeSet;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
@@ -987,5 +987,28 @@ impl Store {
     /// Get a write transaction for use with extra_table()
     pub fn write_txn(&self) -> Result<RwTxn, Error> {
         self.indexes.write_txn()
+    }
+
+    /// Vanish a user (NIP-62 Request to Vanish)
+    ///
+    /// Caller is responsible for verifying the event and its relay tag
+    pub fn vanish(&self, event: &Event) -> Result<(), Error> {
+        // delete all events with this pubkey
+        let tags = OwnedTags::empty();
+        let filter = OwnedFilter::new(&[], &[event.pubkey()], &[], &tags, None, None, None)?;
+        let authored_events = self.find_events(&filter, true, 0, 0, |_| true)?;
+        for event in authored_events.iter() {
+            self.remove_event(event.id())?;
+        }
+
+        // delete giftwraps that p-tag this pubkey
+        let tags = OwnedTags::new(&[vec!["p", &event.pubkey().as_hex_string()?]])?;
+        let filter = OwnedFilter::new(&[], &[], &[Kind::from_u16(1059)], &tags, None, None, None)?;
+        let giftwrap_events = self.find_events(&filter, true, 0, 0, |_| true)?;
+        for event in giftwrap_events.iter() {
+            self.remove_event(event.id())?;
+        }
+
+        Ok(())
     }
 }
