@@ -635,6 +635,12 @@ impl DerefMut for OwnedFilter {
     }
 }
 
+impl fmt::Display for OwnedFilter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.deref())
+    }
+}
+
 /// Parses a JSON filter from the `input` buffer. Places the parsed filter into the `output` buffer.
 /// Returns the count of consumed bytes and output bytes
 fn parse_json_filter(input: &[u8], output: &mut [u8]) -> Result<(usize, usize), Error> {
