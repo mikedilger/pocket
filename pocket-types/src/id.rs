@@ -18,10 +18,10 @@ impl Id {
     }
 
     /// Write to a hex String (allocates)
-    pub fn as_hex_string(&self) -> Result<String, Error> {
+    pub fn as_hex_string(&self) -> String {
         let mut buf: Vec<u8> = vec![0; 64];
         self.write_hex(&mut buf).unwrap();
-        Ok(unsafe { String::from_utf8_unchecked(buf) })
+        unsafe { String::from_utf8_unchecked(buf) }
     }
 
     /// Read from input buffer in lowercase hex format

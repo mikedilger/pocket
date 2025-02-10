@@ -260,7 +260,7 @@ fn test_get_event_by_offset() {
 #[test]
 fn test_deleted_by_id_event_is_deleted() {
     let (store, author, e, _temp) = setup(1.into(), &[TAG_CLIENT], "GM");
-    let ehexstr = e.id().as_hex_string().unwrap();
+    let ehexstr = e.id().as_hex_string();
 
     // Store a delete event
     let del = make_event(&author, 5.into(), &[&["e", &ehexstr]], "", None).unwrap();
@@ -278,7 +278,7 @@ fn test_deleted_by_id_event_is_deleted() {
 #[test]
 fn test_cannot_delete_by_id_events_of_others() {
     let (store, _author, e, _temp) = setup(1.into(), &[TAG_CLIENT], "GM");
-    let ehexstr = e.id().as_hex_string().unwrap();
+    let ehexstr = e.id().as_hex_string();
 
     // Store an invalid delete event (due to wrong author)
     let author2 = make_author();
@@ -300,7 +300,7 @@ fn test_cannot_delete_by_id_events_of_others() {
 #[test]
 fn test_resubmission_of_deleted_by_id_event_is_rejected() {
     let (store, author, e, _temp) = setup(1.into(), &[TAG_CLIENT], "GM");
-    let ehexstr = e.id().as_hex_string().unwrap();
+    let ehexstr = e.id().as_hex_string();
 
     // Store a delete event
     let del = make_event(&author, 5.into(), &[&["e", &ehexstr]], "", None).unwrap();
@@ -321,7 +321,7 @@ fn test_deleted_by_npnaddr_event_is_deleted() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -345,7 +345,7 @@ fn test_cannot_delete_by_npnaddr_events_of_others() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Try to store an invalid delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let author2 = make_author();
     let del = make_event(
         &author2,
@@ -373,7 +373,7 @@ fn test_resubmission_of_deleted_by_npnaddr_event_is_rejected() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -396,7 +396,7 @@ fn test_submission_of_any_older_deleted_by_npnaddr_event_is_rejected() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -427,7 +427,7 @@ fn test_submission_of_any_newer_deleted_by_npnaddr_event_is_accepted() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -460,7 +460,7 @@ fn test_deleted_by_npnaddr_doesnt_affect_newer_events() {
     let (store, author, e, _temp) = setup(10003.into(), &[TAG_T_NOSTR], "");
 
     // Store a delete event before it
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -480,7 +480,7 @@ fn test_deleted_by_pnaddr_event_is_deleted() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -504,7 +504,7 @@ fn test_cannot_delete_by_pnaddr_events_of_others() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Attempt to store an invalid delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let author2 = make_author();
     let del = make_event(
         &author2,
@@ -532,7 +532,7 @@ fn test_resubmission_of_deleted_by_pnaddr_event_is_rejected() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -555,7 +555,7 @@ fn test_submission_of_any_older_deleted_by_pnaddr_event_is_rejected() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -586,7 +586,7 @@ fn test_submission_of_any_newer_deleted_by_pnaddr_event_is_accepted() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -619,7 +619,7 @@ fn test_deleted_by_pnaddr_doesnt_affect_newer_events() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
 
     // Store a delete event before it
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -639,7 +639,7 @@ fn test_deleted_by_pnaddr_is_bound_by_d_tag() {
     let (store, author, e, _temp) = setup(30023.into(), &[&["d", "chucky"]], "");
 
     // Store a delete event
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),
@@ -753,7 +753,7 @@ fn test_stats() {
     assert_eq!(stats.index_stats.i_index_entries, 1);
 
     // Store a delete event that removes the first event check again
-    let ehexstr = e.id().as_hex_string().unwrap();
+    let ehexstr = e.id().as_hex_string();
     let del = make_event(&author, 5.into(), &[&["e", &ehexstr]], "", None).unwrap();
     let _ = store.store_event(&del).unwrap();
     let stats = store.stats().unwrap();
@@ -782,7 +782,7 @@ fn test_naddr_is_deleted_asof() {
 
     // Store a delete event
     let time = e.created_at() + 1;
-    let authorhex = author.pubkey().as_hex_string().unwrap();
+    let authorhex = author.pubkey().as_hex_string();
     let del = make_event(
         &author,
         5.into(),

@@ -1002,7 +1002,7 @@ impl Store {
         }
 
         // delete giftwraps that p-tag this pubkey
-        let tags = OwnedTags::new(&[vec!["p", &event.pubkey().as_hex_string()?]])?;
+        let tags = OwnedTags::new(&[vec!["p", &event.pubkey().as_hex_string()]])?;
         let filter = OwnedFilter::new(&[], &[], &[Kind::from_u16(1059)], &tags, None, None, None)?;
         let giftwrap_events = self.find_events(&filter, true, 0, 0, |_| true)?;
         for event in giftwrap_events.iter() {
