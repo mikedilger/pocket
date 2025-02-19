@@ -103,7 +103,7 @@ impl Tags {
             for sref in tag.iter() {
                 let s = sref.as_ref();
 
-                let slen = s.as_bytes().len();
+                let slen = s.len();
 
                 // write string len
                 output[p..p + 2].copy_from_slice((slen as u16).to_ne_bytes().as_slice());
@@ -128,7 +128,7 @@ impl Tags {
             for sref in tag.iter() {
                 let s = sref.as_ref();
                 length += 2; // for the len
-                length += s.as_bytes().len(); // for the data itself
+                length += s.len(); // for the data itself
             }
         }
         length
