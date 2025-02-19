@@ -485,17 +485,29 @@ impl Store {
     }
 
     /// Find all events that match the filter
+    /// Also returns whether any were redacted
     pub fn find_events<F>(
         &self,
         filter: &Filter,
         allow_scraping: bool,
         allow_scrape_if_limited_to: u32,
         allow_scrape_if_max_seconds: u64,
-        screen: F,
-    ) -> Result<Vec<&Event>, Error>
+        user_screen: F,
+    ) -> Result<(Vec<&Event>, bool), Error>
     where
-        F: Fn(&Event) -> bool,
+        F: Fn(&Event) -> ScreenResult,
     {
+        let mut redacted: bool = false;
+
+        let mut screen = |e: &Event| match user_screen(e) {
+            ScreenResult::Match => true,
+            ScreenResult::Mismatch => false,
+            ScreenResult::Redacted => {
+                redacted = true;
+                false
+            }
+        };
+
         let txn = self.indexes.read_txn()?;
 
         // We insert into a BTreeSet to keep them time-ordered
@@ -782,12 +794,14 @@ impl Store {
         }
 
         // Convert to a Vec, reverse time order, and apply limit
-        Ok(output
+        let events = output
             .iter()
             .rev()
             .take(filter.limit() as usize)
             .copied()
-            .collect())
+            .collect();
+
+        Ok((events, redacted))
     }
 
     /// Find a replaceable event
@@ -996,7 +1010,8 @@ impl Store {
         // delete all events with this pubkey
         let tags = OwnedTags::empty();
         let filter = OwnedFilter::new(&[], &[event.pubkey()], &[], &tags, None, None, None)?;
-        let authored_events = self.find_events(&filter, true, 0, 0, |_| true)?;
+        let (authored_events, _redacted) =
+            self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in authored_events.iter() {
             self.remove_event(event.id())?;
         }
@@ -1004,11 +1019,25 @@ impl Store {
         // delete giftwraps that p-tag this pubkey
         let tags = OwnedTags::new(&[vec!["p", &event.pubkey().as_hex_string()]])?;
         let filter = OwnedFilter::new(&[], &[], &[Kind::from_u16(1059)], &tags, None, None, None)?;
-        let giftwrap_events = self.find_events(&filter, true, 0, 0, |_| true)?;
+        let (giftwrap_events, _redacted) =
+            self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in giftwrap_events.iter() {
             self.remove_event(event.id())?;
         }
 
         Ok(())
     }
+}
+
+/// The result of screening an event
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ScreenResult {
+    /// The event is ok to deliver
+    Match,
+
+    /// The event is not ok to deliver
+    Mismatch,
+
+    /// The event is not ok to deliver, but it might be if the user had authenticated
+    Redacted,
 }

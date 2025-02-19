@@ -1,7 +1,7 @@
 mod error;
 use error::Error;
 
-use pocket_db::{InnerError, Store};
+use pocket_db::{InnerError, ScreenResult, Store};
 use pocket_types::{Addr, Id, Kind, OwnedEvent, OwnedFilter, OwnedTags, Pubkey, Sig, Time};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
@@ -106,7 +106,9 @@ fn test_find_by_id() {
     store.store_event(&mismatch).unwrap();
     let filter =
         OwnedFilter::new(&[e.id()], &[], &[], &OwnedTags::empty(), None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -126,7 +128,9 @@ fn test_find_by_pubkey_and_kind() {
         None,
     )
     .unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -138,7 +142,9 @@ fn test_find_by_pubkey_and_tags() {
     store.store_event(&mismatch).unwrap();
     let tags = OwnedTags::new(&[TAG_E_TEST]).unwrap();
     let filter = OwnedFilter::new(&[], &[e.pubkey()], &[], &tags, None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -150,7 +156,9 @@ fn test_find_by_kind_and_tags() {
     store.store_event(&mismatch).unwrap();
     let tags = OwnedTags::new(&[TAG_E_TEST]).unwrap();
     let filter = OwnedFilter::new(&[], &[], &[e.kind()], &tags, None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -162,7 +170,9 @@ fn test_find_by_tags() {
     store.store_event(&mismatch).unwrap();
     let tags = OwnedTags::new(&[TAG_E_TEST]).unwrap();
     let filter = OwnedFilter::new(&[], &[], &[], &tags, None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -182,7 +192,9 @@ fn test_find_by_pubkey() {
         None,
     )
     .unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 }
@@ -203,7 +215,9 @@ fn test_find_by_scrape() {
         None,
     )
     .unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*e);
 
@@ -217,7 +231,9 @@ fn test_find_by_scrape() {
         None,
     )
     .unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 2);
 }
 
@@ -689,7 +705,9 @@ fn test_replaceable_event_removes_previous() {
         None,
     )
     .unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*replacement);
 }
@@ -723,7 +741,9 @@ fn test_paramterized_replaceable_event_removes_previous() {
     let tags = OwnedTags::new(&[&["d", "testing"]]).unwrap();
     let filter =
         OwnedFilter::new(&[], &[addr.author], &[addr.kind], &tags, None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0], &*replacement);
 }
@@ -766,7 +786,9 @@ fn test_rebuild() {
     let (store, _, _, _temp) = setup(30023.into(), &[&["d", "testing"]], "");
     let store = unsafe { store.rebuild().unwrap() };
     let filter = OwnedFilter::new(&[], &[], &[], &OwnedTags::empty(), None, None, None).unwrap();
-    let events = store.find_events(&filter, true, 0, 0, |_| true).unwrap();
+    let (events, _) = store
+        .find_events(&filter, true, 0, 0, |_| ScreenResult::Match)
+        .unwrap();
     assert_eq!(events.len(), 1);
 }
 
