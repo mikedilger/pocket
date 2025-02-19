@@ -344,6 +344,12 @@ impl Filter {
         Ok(true)
     }
 
+    /// Does this filter complete, or does it trigger EOSE and wait for more?
+    pub fn completes(&self) -> bool {
+        // If IDs are specified, it completes.
+        self.num_ids() > 0
+    }
+
     /// Output JSON bytes for this nostr filter
     pub fn as_json(&self) -> Result<Vec<u8>, Error> {
         let mut output: Vec<u8> = Vec::with_capacity(256);
