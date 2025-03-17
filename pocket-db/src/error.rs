@@ -1,3 +1,4 @@
+use pocket_types::Pubkey;
 use std::error::Error as StdError;
 use std::panic::Location;
 
@@ -51,6 +52,9 @@ pub enum InnerError {
     /// An error from pocket-types
     PocketTypes(pocket_types::Error),
 
+    /// Public key has been burnt
+    PubkeyBurnt(Pubkey),
+
     /// The event was previously replaced
     Replaced,
 
@@ -75,6 +79,9 @@ impl std::fmt::Display for InnerError {
             InnerError::Lmdb(e) => write!(f, "LMDB: {e}"),
             InnerError::InvalidDelete => write!(f, "Invalid delete event"),
             InnerError::PocketTypes(e) => write!(f, "types: {e}"),
+            InnerError::PubkeyBurnt(pk) => {
+                write!(f, "Public key {pk} has been burnt/vanished/revoked")
+            }
             InnerError::Replaced => write!(f, "Event was previously replaced"),
             InnerError::Scraper => write!(f, "scraper"),
             InnerError::WrongEventKind => write!(f, "Wrong event kind"),

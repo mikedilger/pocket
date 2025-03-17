@@ -292,6 +292,11 @@ impl Store {
             return Err(InnerError::Duplicate.into());
         }
 
+        // Return error if pubkey has been burnt
+        if self.indexes.is_pubkey_deleted(&txn, event.pubkey())? {
+            return Err(InnerError::PubkeyBurnt(event.pubkey()).into());
+        }
+
         // Handle deleted events
         {
             // Reject event if ID was deleted
@@ -1016,6 +1021,7 @@ impl Store {
             self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in authored_events.iter() {
             self.remove_by_id(&mut txn, event.id())?;
+            self.indexes.mark_deleted(&mut txn, event.id())?;
         }
 
         // delete giftwraps that p-tag this pubkey
@@ -1025,7 +1031,11 @@ impl Store {
             self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in giftwrap_events.iter() {
             self.remove_by_id(&mut txn, event.id())?;
+            self.indexes.mark_deleted(&mut txn, event.id())?;
         }
+
+        // Mark this pubkey as burnt so no new events are accepted from it
+        self.indexes.mark_pubkey_deleted(&mut txn, event.pubkey())?;
 
         txn.commit()?;
 

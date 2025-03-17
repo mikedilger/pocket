@@ -24,6 +24,7 @@ pub(crate) struct Lmdb {
     ktc_index: Database<Bytes, U64<NativeEndian>>,
     deleted_ids: Database<Bytes, Unit>,
     deleted_naddrs: Database<Bytes, U64<NativeEndian>>, // value is Time
+    deleted_pubkeys: Database<Bytes, Unit>,
     extra_tables: HashMap<&'static str, Database<Bytes, Bytes>>,
 }
 
@@ -93,7 +94,11 @@ impl Lmdb {
             .types::<Bytes, U64<NativeEndian>>()
             .name("deleted-naddrs")
             .create(&mut txn)?;
-
+        let deleted_pubkeys = env
+            .database_options()
+            .types::<Bytes, Unit>()
+            .name("deleted-pubkeys")
+            .create(&mut txn)?;
         let mut extra_tables = HashMap::with_capacity(extra_table_names.len());
         for extra_table_name in extra_table_names.iter() {
             let table = env
@@ -118,6 +123,7 @@ impl Lmdb {
             ktc_index,
             deleted_ids,
             deleted_naddrs,
+            deleted_pubkeys,
             extra_tables,
         };
 
@@ -173,6 +179,7 @@ impl Lmdb {
             ktc_index_entries: self.ktc_index.len(&txn)?,
             deleted_index_entries: self.deleted_ids.len(&txn)?,
             deleted_naddr_index_entries: self.deleted_naddrs.len(&txn)?,
+            deleted_pubkeys_index_entries: self.deleted_pubkeys.len(&txn)?,
             custom_entries,
         })
     }
@@ -360,6 +367,19 @@ impl Lmdb {
     ) -> Result<Option<Time>, Error> {
         let key = Self::key_naddr_index(addr);
         Ok(self.deleted_naddrs.get(txn, &key)?.map(Time::from_u64))
+    }
+
+    pub(crate) fn mark_pubkey_deleted(
+        &self,
+        txn: &mut RwTxn<'_>,
+        pubkey: Pubkey,
+    ) -> Result<(), Error> {
+        self.deleted_pubkeys.put(txn, pubkey.as_slice(), &())?;
+        Ok(())
+    }
+
+    pub(crate) fn is_pubkey_deleted(&self, txn: &RoTxn<'_>, pubkey: Pubkey) -> Result<bool, Error> {
+        Ok(self.deleted_pubkeys.get(txn, pubkey.as_slice())?.is_some())
     }
 
     pub(crate) fn dump_deleted(&self) -> Result<Vec<Id>, Error> {

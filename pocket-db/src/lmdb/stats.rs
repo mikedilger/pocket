@@ -37,6 +37,9 @@ pub struct IndexStats {
     /// Number of entries in the deleted naddr index
     pub deleted_naddr_index_entries: u64,
 
+    /// Number of entries in the deleted pubkeys index
+    pub deleted_pubkeys_index_entries: u64,
+
     /// Number of entries in custom databases
     pub custom_entries: Vec<(&'static str, u64)>,
 }
@@ -85,5 +88,10 @@ impl IndexStats {
     /// bytes used by the deleted naddr index
     pub fn deleted_naddr_index_bytes(&self) -> u64 {
         self.deleted_naddr_index_entries * (2 + 32 + 1 + 182)
+    }
+
+    /// bytes used by the deleted pubkeys index
+    pub fn deleted_pubkeys_index_bytes(&self) -> u64 {
+        self.deleted_pubkeys_index_entries * 32
     }
 }
