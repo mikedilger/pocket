@@ -1007,13 +1007,15 @@ impl Store {
     ///
     /// Caller is responsible for verifying the event and its relay tag
     pub fn vanish(&self, event: &Event) -> Result<(), Error> {
+        let mut txn = self.indexes.write_txn()?;
+
         // delete all events with this pubkey
         let tags = OwnedTags::empty();
         let filter = OwnedFilter::new(&[], &[event.pubkey()], &[], &tags, None, None, None)?;
         let (authored_events, _redacted) =
             self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in authored_events.iter() {
-            self.remove_event(event.id())?;
+            self.remove_by_id(&mut txn, event.id())?;
         }
 
         // delete giftwraps that p-tag this pubkey
@@ -1022,8 +1024,10 @@ impl Store {
         let (giftwrap_events, _redacted) =
             self.find_events(&filter, true, 0, 0, |_| ScreenResult::Match)?;
         for event in giftwrap_events.iter() {
-            self.remove_event(event.id())?;
+            self.remove_by_id(&mut txn, event.id())?;
         }
+
+        txn.commit()?;
 
         Ok(())
     }
