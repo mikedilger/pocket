@@ -294,7 +294,7 @@ impl Store {
 
         // Return error if pubkey has been burnt
         if self.indexes.is_pubkey_deleted(&txn, event.pubkey())? {
-            return Err(InnerError::PubkeyBurnt(event.pubkey()).into());
+            return Err(InnerError::PubkeyBurnt(Box::new(event.pubkey())).into());
         }
 
         // Handle deleted events

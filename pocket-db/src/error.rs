@@ -53,7 +53,7 @@ pub enum InnerError {
     PocketTypes(pocket_types::Error),
 
     /// Public key has been burnt
-    PubkeyBurnt(Pubkey),
+    PubkeyBurnt(Box<Pubkey>),
 
     /// The event was previously replaced
     Replaced,
