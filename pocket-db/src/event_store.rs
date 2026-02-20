@@ -87,7 +87,7 @@ impl EventStore {
     pub(crate) fn store_event(&self, event: &Event) -> Result<usize, Error> {
         // Align to 8 bytes
         let mut end = self.event_map.get_end();
-        if end % 8 != 0 {
+        if !end.is_multiple_of(8) {
             let padding = 8 - (end % 8);
             end += padding;
             assert_eq!(end % 8, 0);
@@ -166,7 +166,7 @@ impl<'a> Iterator for EventStoreIter<'a> {
                 Ok(event) => {
                     self.offset += event.len();
                     // Bump to next 8-byte alignment point
-                    if self.offset % 8 != 0 {
+                    if !self.offset.is_multiple_of(8) {
                         self.offset += 8 - (self.offset % 8);
                         assert_eq!(self.offset % 8, 0);
                     }

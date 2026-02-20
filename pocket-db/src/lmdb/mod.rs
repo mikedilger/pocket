@@ -555,7 +555,7 @@ impl Lmdb {
         key.push(letter);
         if tag_value.len() <= PADLEN {
             key.extend(tag_value);
-            key.extend(core::iter::repeat(0).take(PADLEN - tag_value.len()));
+            key.extend(std::iter::repeat_n(0, PADLEN - tag_value.len()));
         } else {
             key.extend(&tag_value[..PADLEN]);
         }
@@ -612,7 +612,7 @@ impl Lmdb {
         key.push(letter);
         if tag_value.len() <= PADLEN {
             key.extend(tag_value);
-            key.extend(core::iter::repeat(0).take(PADLEN - tag_value.len()));
+            key.extend(std::iter::repeat_n(0, PADLEN - tag_value.len()));
         } else {
             key.extend(&tag_value[..PADLEN]);
         }
@@ -641,7 +641,7 @@ impl Lmdb {
         key.push(letter);
         if tag_value.len() <= PADLEN {
             key.extend(tag_value);
-            key.extend(core::iter::repeat(0).take(PADLEN - tag_value.len()));
+            key.extend(std::iter::repeat_n(0, PADLEN - tag_value.len()))
         } else {
             key.extend(&tag_value[..PADLEN]);
         }
@@ -667,7 +667,7 @@ impl Lmdb {
         key.extend(&[dlen as u8]); // the length itself in one byte
         if dlen <= PADLEN {
             key.extend(addr.d.as_slice());
-            key.extend(core::iter::repeat(0).take(PADLEN - dlen));
+            key.extend(std::iter::repeat_n(0, PADLEN - dlen));
         } else {
             key.extend(&addr.d[..PADLEN]);
         }
