@@ -999,12 +999,12 @@ impl Store {
     }
 
     /// Get a read transaction for use with extra_table()
-    pub fn read_txn(&self) -> Result<RoTxn, Error> {
+    pub fn read_txn(&self) -> Result<RoTxn<'_>, Error> {
         self.indexes.read_txn()
     }
 
     /// Get a write transaction for use with extra_table()
-    pub fn write_txn(&self) -> Result<RwTxn, Error> {
+    pub fn write_txn(&self) -> Result<RwTxn<'_>, Error> {
         self.indexes.write_txn()
     }
 
