@@ -40,6 +40,11 @@ impl Pubkey {
     pub fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }
+
+    /// Turn into a byte array
+    pub fn into_inner(self) -> [u8; 32] {
+        self.0
+    }
 }
 
 impl fmt::Display for Pubkey {

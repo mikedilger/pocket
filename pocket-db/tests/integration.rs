@@ -22,7 +22,7 @@ impl Author {
         use secp256k1::{Keypair, Message};
 
         let keypair = Keypair::from_secret_key(secp256k1::SECP256K1, &self.seckey);
-        let message = Message::from_digest_slice(id.as_slice())?;
+        let message = Message::from_digest(id.0)?;
         Ok(Sig::from_bytes(keypair.sign_schnorr(message).serialize()))
     }
 }

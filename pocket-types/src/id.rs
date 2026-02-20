@@ -35,6 +35,11 @@ impl Id {
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }
+
+    /// Turn into a byte array
+    pub fn into_inner(self) -> [u8; 32] {
+        self.0
+    }
 }
 
 impl fmt::Display for Id {

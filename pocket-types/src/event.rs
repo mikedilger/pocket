@@ -251,10 +251,10 @@ impl Event {
             return Err(InnerError::BadEventId.into());
         }
 
-        let pubkey = XOnlyPublicKey::from_slice(self.pubkey().as_slice())?;
-        let sig = Signature::from_slice(self.sig().as_slice())?;
-        let message = Message::from_digest_slice(hashref)?;
-        sig.verify(&message, &pubkey)?;
+        let pubkey = XOnlyPublicKey::from_byte_array(self.pubkey().into_inner())?;
+        let sig = Signature::from_byte_array(self.sig().into_inner());
+        let message = Message::from_digest(hash.to_byte_array());
+        sig.verify(message.as_ref().as_slice(), &pubkey)?;
 
         Ok(())
     }
@@ -361,9 +361,9 @@ impl OwnedEvent {
         let hash = sha256::Hash::hash(signable.as_bytes());
         let hashref = <sha256::Hash as AsRef<[u8; 32]>>::as_ref(&hash);
         let id = Id::from_bytes(*hashref);
-        let message = Message::from_digest_slice(hashref)?;
-        let signature = keypair.sign_schnorr(message);
-        let sig = Sig::from_bytes(signature.serialize());
+        let message = Message::from_digest(hash.to_byte_array());
+        let signature = keypair.sign_schnorr(message.as_ref().as_slice());
+        let sig = Sig::from_bytes(signature.to_byte_array());
         Self::new(id, kind, pubkey, sig, tags, created_at, content)
     }
 }
