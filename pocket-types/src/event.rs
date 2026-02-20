@@ -745,7 +745,8 @@ mod test {
         use crate::{Kind, OwnedEvent, OwnedTags, Time};
         use secp256k1::Keypair;
 
-        let keypair = Keypair::new_global(&mut rand::thread_rng());
+        let mut rnd = rand::rng();
+        let keypair = Keypair::new_global(&mut rnd);
         let event = OwnedEvent::sign_new(
             &keypair,
             Kind::from_u16(1),

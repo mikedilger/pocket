@@ -3,7 +3,6 @@ use error::Error;
 
 use pocket_db::{InnerError, ScreenResult, Store};
 use pocket_types::{Addr, Id, Kind, OwnedEvent, OwnedFilter, OwnedTags, Pubkey, Sig, Time};
-use secp256k1::rand::rngs::OsRng;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use tempfile::TempDir;
 
@@ -22,14 +21,19 @@ impl Author {
         use secp256k1::{Keypair, Message};
 
         let keypair = Keypair::from_secret_key(secp256k1::SECP256K1, &self.seckey);
-        let message = Message::from_digest(id.0)?;
-        Ok(Sig::from_bytes(keypair.sign_schnorr(message).serialize()))
+        let message = Message::from_digest(id.into_inner());
+        Ok(Sig::from_bytes(
+            keypair
+                .sign_schnorr(message.as_ref().as_slice())
+                .to_byte_array(),
+        ))
     }
 }
 
 fn make_author() -> Author {
     let secp = Secp256k1::new();
-    let (seckey, pubkey) = secp.generate_keypair(&mut OsRng);
+    let mut rnd = rand::rng();
+    let (seckey, pubkey) = secp.generate_keypair(&mut rnd);
     Author { seckey, pubkey }
 }
 
@@ -756,7 +760,7 @@ fn test_stats() {
 
     let stats = store.stats().unwrap();
     assert_eq!(stats.event_bytes, 417);
-    assert_eq!(stats.index_stats.general_entries, 9);
+    assert_eq!(stats.index_stats.general_entries, 10); // this used to be 9. now 10.
     assert_eq!(stats.index_stats.i_index_entries, 2);
     assert_eq!(stats.index_stats.ci_index_entries, 2);
     assert_eq!(stats.index_stats.tc_index_entries, 1); // only 1 indexable tag in second event

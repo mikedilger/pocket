@@ -15,4 +15,5 @@ pocket-types = { path = "../pocket-types" }
 
 [dev-dependencies]
 secp256k1 = { version = "0.31", features = [ "hashes", "global-context", "rand", "std" ] }
+rand = "0.9"
 tempfile = "3"

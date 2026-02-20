@@ -9,8 +9,5 @@ edition = "2021"
 
 [dependencies]
 derive_more = "0.99"
+rand = "0.9"
 secp256k1 = { version = "0.31", features = [ "hashes", "global-context", "rand", "std" ] }
-
-[dev-dependencies]
-rand = "0.8"
-rand_core = "0.6"
