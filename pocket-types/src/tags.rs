@@ -50,6 +50,17 @@ impl Tags {
         if input.len() < len {
             return Err(InnerError::EndOfInput.into());
         }
+        let num_tags = parse_u16!(input, 2) as usize;
+        let header_size = 4 + 2 * num_tags;
+        if header_size > len {
+            return Err(InnerError::EndOfInput.into());
+        }
+        for i in 0..num_tags {
+            let offset = parse_u16!(input, 4 + 2 * i) as usize;
+            if offset + 2 > len {
+                return Err(InnerError::EndOfInput.into());
+            }
+        }
         Ok(Self::from_inner(&input[0..len]))
     }
 
